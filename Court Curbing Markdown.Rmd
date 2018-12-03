@@ -1,0 +1,514 @@
+---
+title: "Court Curb Analysis"
+author: "Richard G. Gardiner"
+date: "10/24/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Summary
+
+See notes section for a breakdown of the different model variations and the robustness of the results
+
+
+# Ideas
+
+Create figures that show the ideological distance by type (I may have already done this)
+Run models of elections without the ideological distance variables
+
+# Questions
+
+
+# Reading in Data
+```{r, packages, message=FALSE}
+library(tidyverse)
+library(readxl)
+library(grid)
+library(gridExtra)
+```
+
+This section reads in the relevant data I have collected as well as joins some additional datasets to get political culture and and legislative control.
+```{r, reading_in_data, message = FALSE}
+gavelFull <- read_excel("Gavel to Gavel dataset.xlsx")
+politicalCulture <- read_csv("political culture.csv")
+legislativeControl <- read_excel("Legislative Control.xlsx")
+
+```
+
+Now I join the full gavel-to-gavel dataset with the political culture and test to make sure that there is no problem of "full rank"
+```{r}
+gavelWithCulture <- left_join(gavelFull, politicalCulture, 
+                               by = c("Fullstate" = "State"))
+
+table(gavelWithCulture$Moralistic, gavelWithCulture$Traditionalistic)
+```
+
+The same process, with this one being legislative control.
+```{r}
+gavelCultureControl <- left_join(gavelWithCulture, legislativeControl,
+                                 by = c("Fullstate" = "State", "Year" = "Year"))
+
+table(gavelCultureControl$RepublicanLegslature, gavelCultureControl$SplitLegislature)
+```
+
+Here I am changing the control variables from strings into numerics to allow for modeling.
+```{r}
+gavelCultureControl$Culture <- ifelse(gavelCultureControl$Moralistic == 1, "Moralistic", 
+                                      ifelse(gavelCultureControl$Traditionalistic == 1, "Traditionalistic",
+                                             "Individualistic"))
+table(gavelCultureControl$Culture, gavelCultureControl$Culture)
+
+gavelCultureControl$legislativeControl <- ifelse(gavelCultureControl$RepublicanLegslature == 1, "Republican", 
+                                                 ifelse(gavelCultureControl$SplitLegislature == 1, "Split",
+                                                        "Democratic"))
+table(gavelCultureControl$legislativeControl, gavelCultureControl$legislativeControl)
+
+```
+
+# Initial Analysis
+
+First graph.  This analyses each row and sees how many rows have curbs compared to legislation that does not curb courts.  While we do see a little variation between the different cultures, my guess is that almost all of the variation occurs because of raw numbers.
+```{r, curbs_by_culture}
+ggplot(data = subset(gavelCultureControl, !is.na(gavelCultureControl$Culture))) +
+  geom_bar(aes(x = curbing)) +
+  facet_wrap(~Culture)
+
+
+table(gavelCultureControl$curbing)
+```
+
+As with the graph, we see that Traditionalistic states have slightly higher rates of curbing than Moralistic and Individualistic is the lowest. Still not convinced that there is a real relationship occuring.
+```{r}
+gavelCultureControl %>%
+  group_by(Culture) %>%
+  filter(!is.na(Culture)) %>%
+  filter(!is.na(curbing)) %>%
+  summarise(mean = mean(curbing))
+```
+
+Trying to see bill outcomes for all legislation. 
+```{r}
+table(gavelCultureControl$legislativeControl, gavelCultureControl$RichardLastAction)
+```
+
+Running the same code, but creating a new object in which only curbing legislation is included.  Republican legislatures have a significant more in every category.  There are certainly more instances of Republican control, but this one may be significant enough.  Interestingly, though, is that Democratic legislatures have more enacted legislation.
+```{r}
+gavelCultureControlOnlyCurbs <- gavelCultureControl %>%
+  filter(curbing == 1) 
+  
+table(gavelCultureControlOnlyCurbs$legislativeControl, gavelCultureControlOnlyCurbs$RichardLastAction)
+```
+
+The last outcome did make me want to look at years and how many instances Democrats controlled the state legislature compared to Republicans.  Republicans are in power more often, but a rather small gap compared to the amount of legislation.  Results: Republican is 241 instances, Democratic is 221, and Split is 76
+```{r}
+table(legislativeControl$RepublicanLegslature, legislativeControl$SplitLegislature)
+```
+
+Drilling down into the data, I now look at proportions for legislation that is introduced and then enacted:
+```{r}
+# republican controlled legislatures introduced court curbing bills 16.7 times a year, 18.6 for democratically controlled, and split had 11.97 
+introduced <- c(3702/221, 4483/241, 910/76)
+introduced 
+
+# enacted legislation proportion
+enacted <- c(197/3702, 185/4483, 46/910)
+enacted
+```
+
+## Calculating Distance From Each Branch
+
+As Dr. Steigerwalt suggested, rather than making a complex ideological distance measure with all three branches, I am creating a separate variable for ideological distance for the court and each actor (Governor, lower chamber, upper chamber).  These are simply taking the absolute difference between the branches then graphing to get a better idea.
+```{r}
+gavelCultureControl$court_gov_dist <- abs(gavelCultureControl$judicial - gavelCultureControl$governor)
+gavelCultureControl$court_lower_dist <- abs(gavelCultureControl$judicial - gavelCultureControl$lower)
+gavelCultureControl$court_upper_dist <- abs(gavelCultureControl$judicial - gavelCultureControl$upper)
+```
+
+The graphs below (which are eventually put into one grid) show the ideological distance for each relationship broken down by selection
+```{r, ideological_distance_graphs, collapse = TRUE}
+a <- ggplot(data = gavelCultureControl) +
+  geom_boxplot(aes(x = MoreDefined, y = court_gov_dist)) +
+  xlab(NULL) +
+  ylab("Court - Governor")
+b <- ggplot(data = gavelCultureControl) +
+  geom_boxplot(aes(x = MoreDefined, y = court_lower_dist)) +
+  xlab(NULL) +
+  ylab("Court - Lower")
+c <- ggplot(data = gavelCultureControl) +
+  geom_boxplot(aes(x = MoreDefined, y = court_upper_dist)) +
+  xlab("Selection System") +
+  ylab("Court - Upper")
+
+grid.arrange(a,b,c)
+```
+
+
+## Creating objects with time and average ideological distance
+```{r, ideological_distance_over_time, collapse = TRUE}
+ideology_gov_year <- gavelCultureControl %>% 
+  group_by(MoreDefined, Year) %>%
+  filter(!is.na(court_gov_dist)) %>%
+  summarise(govMean = mean(court_gov_dist))
+
+ideology_upper_year <- gavelCultureControl %>% 
+  group_by(MoreDefined, Year) %>%
+  filter(!is.na(court_upper_dist)) %>%
+  summarise(upperMean = mean(court_upper_dist))
+
+ideology_lower_year <- gavelCultureControl %>% 
+  group_by(MoreDefined, Year) %>%
+  filter(!is.na(court_lower_dist)) %>%
+  summarise(lowerMean = mean(court_lower_dist))
+
+## graphing the data
+d <- ggplot(data = ideology_gov_year) +
+  geom_line(aes(x = Year, y = govMean, color = MoreDefined)) +
+  scale_x_continuous(breaks = c(2007, 2009, 2011, 2013, 2015, 2017)) +
+  xlab(NULL) +
+  ylab("Mean: Court - Governor") +
+  labs(colour = "Selection")
+
+e <- ggplot(data = ideology_upper_year) +
+  geom_line(aes(x = Year, y = upperMean, color = MoreDefined)) +
+  scale_x_continuous(breaks = c(2007, 2009, 2011, 2013, 2015, 2017)) +
+  xlab(NULL) +
+  ylab("Mean: Court - Upper") +
+  labs(colour = "Selection")
+
+f <- ggplot(data = ideology_lower_year) +
+  geom_line(aes(x = Year, y = lowerMean, color = MoreDefined)) +
+  scale_x_continuous(breaks = c(2007, 2009, 2011, 2013, 2015, 2017)) +
+  xlab(NULL) +
+  ylab("Mean: Court - Lower") +
+  labs(colour = "Selection")
+
+# retention continues to be at teh high end of the list
+grid.arrange(d,e,f)
+```
+
+
+
+### Graphing the Relationship between ideologicaly distance and court curbing
+
+The code below creates scatter plots that show the relationship between ideological distance and court curbing legislation.  Note the difference in scales!  Unsurprisingly, there appears to be the weakest relationship between curbs and ideological distance between the Court and Governor. 
+```{r}
+g <- gavelCultureControl %>%
+  group_by(Fullstate) %>%
+  filter(!is.na(court_lower_dist)) %>%
+  summarise(sum = sum(curbing),
+            avg_ideology = mean(court_lower_dist)) %>%
+  ggplot() +
+  geom_point(aes(x = avg_ideology, y = sum)) +
+  ylab(NULL) +
+  xlab("Court and Lower Chamber") +
+  geom_smooth(aes(x = avg_ideology, y = sum))
+
+
+h <- gavelCultureControl %>%
+  group_by(Fullstate) %>%
+  filter(!is.na(court_upper_dist)) %>%
+  summarise(sum = sum(curbing),
+            avg_ideology = mean(court_upper_dist)) %>%
+  ggplot() +
+  geom_point(aes(x = avg_ideology, y = sum)) +
+  ylab("Court Curbing Introductions") +
+  xlab("Court and Upper Chamber") +
+  geom_smooth(aes(x = avg_ideology, y = sum))
+
+i <- gavelCultureControl %>%
+  group_by(Fullstate) %>%
+  filter(!is.na(court_gov_dist)) %>%
+  summarise(sum = sum(curbing),
+            avg_ideology = mean(court_gov_dist)) %>%
+  ggplot() +
+  geom_point(aes(x = avg_ideology, y = sum)) +
+  ylab(NULL) +
+  xlab("Court and Governor") +
+  geom_smooth(aes(x = avg_ideology, y = sum))
+  
+grid.arrange(g, h, i)
+```
+
+The last chart deserves further exploration.  I decided to also run the last plot, but this time only including enacted legislation.  With the note that this is limited in the number of observations, I decided to graph it.  The results still show really no relationship between ideological distance and curbs.
+```{r}
+gavelCultureControl %>%
+  group_by(Fullstate) %>%
+  filter(!is.na(court_gov_dist)) %>%
+  filter(RichardLastAction == "Enacted") %>%
+  summarise(sum = sum(curbing),
+            avg_ideology = mean(court_gov_dist)) %>%
+  ggplot() +
+  geom_point(aes(x = avg_ideology, y = sum)) +
+  ylab(NULL) +
+  xlab("Court and Governor") +
+  geom_smooth(aes(x = avg_ideology, y = sum))
+```
+
+
+# Model Prep
+
+In order to run a count model, I determined that I needed to have one row per state-year combination.  This required a number of tries, but it appears to have finally worked using the following code (though see question section below for more detail).
+```{r}
+count_data <- gavelCultureControl %>%
+  filter(!(Year %in% c("2007", "43147"))) %>% # filtering out bad data
+  group_by(State, Year) %>% 
+  mutate(curbs = sum(curbing)) %>%
+  distinct(State, Year, .keep_all = TRUE) %>%
+  arrange(State, Year) 
+  
+count_data
+```
+
+
+
+Now I am adding in new "elected" variable as well as making columns for each election system broken down.  This really should have happened earlier, but better late than never.
+```{r}
+count_data$elected <- ifelse(count_data$Elected == "Elected", 1, 0)
+count_data$partisan <- ifelse(count_data$MoreDefined == "Partisan", 1, 0)
+count_data$nonpartisan <- ifelse(count_data$MoreDefined == "Nonpartisan", 1, 0)
+count_data$retention <- ifelse(count_data$MoreDefined == "Retention", 1, 0)
+```
+
+
+### Interacting Ideology and selection system
+
+```{r}
+count_data$elected_ideology_gov <- count_data$elected * count_data$court_gov_dist
+count_data$elected_ideology_upper <- count_data$elected * count_data$court_upper_dist
+count_data$elected_ideology_lower <- count_data$elected * count_data$court_lower_dist
+
+count_data$partisan_ideology_gov <- count_data$partisan * count_data$court_gov_dist
+count_data$partisan_ideology_upper <- count_data$partisan * count_data$court_upper_dist
+count_data$partisan_ideology_lower <- count_data$partisan * count_data$court_lower_dist
+
+count_data$nonpartisan_ideology_gov <- count_data$nonpartisan * count_data$court_gov_dist
+count_data$nonpartisan_ideology_upper <- count_data$nonpartisan * count_data$court_upper_dist
+count_data$nonpartisan_ideology_lower <- count_data$nonpartisan * count_data$court_lower_dist
+
+count_data$retention_ideology_gov <- count_data$retention * count_data$court_gov_dist
+count_data$retention_ideology_upper <- count_data$retention * count_data$court_upper_dist
+count_data$retention_ideology_lower <- count_data$retention * count_data$court_lower_dist
+
+summary(count_data$elected_ideology_gov)
+count_data$elected
+count_data$court_gov_dist
+```
+
+### Adding in Legislative Professionalization
+
+```{r}
+professionalization <- read_csv("ncsl professionalization.csv")
+str(professionalization)
+count_data <- left_join(count_data, professionalization, by = c("Fullstate" = "State"))
+
+# quick vizualization to check the data
+ggplot(data = count_data) +
+  geom_bar(aes(Professionalization))
+```
+
+I want to run another vizualization to test the data.
+```{r}
+ggplot(data = count_data) +
+  geom_boxplot(aes(x = Professionalization, y = curbs, colour = Professionalization), show.legend = FALSE) +
+  ylab("Number of Curbs") +
+  xlab("Level of Professionalization \n(Lowest to Highest)")
+```
+
+## Last Data Cleaning
+
+After meeting with Steigerwalt, I have decided to drop all observations where the legislature has not met.  This is primarily made up of astates that meet every other year.  To do this, I added dummy observations for the few instances where there was no legislation concerning courts that year.  
+
+```{r}
+table(count_data$Year, count_data$Fullstate)
+```
+This table shows the states for which there are no observations that year because they did not meet. The following table shows the number of instances for each state where I had to include dummy variables.
+
+```{r}
+table(gavelFull$Description == "No Legislation", gavelFull$State)
+```
+
+# Iniital Models
+
+```{r}
+curbs.poisson <- glm(curbs ~ Moralistic + Traditionalistic + RepublicanLegslature + SplitLegislature + court_lower_dist + court_upper_dist + retention + partisan + nonpartisan + court_gov_dist + court_lower_dist + court_upper_dist + partisan_ideology_upper + partisan_ideology_lower + nonpartisan_ideology_upper + nonpartisan_ideology_lower + retention_ideology_lower + retention_ideology_upper + Professionalization,
+                     family = poisson(link = log),
+                     data = count_data)
+
+summary(curbs.poisson)
+
+exp(-0.675867) # need exponent to be able to make a good interpreptation.
+# this one, for example, shows us that (for the goefficient on retention elections) that by switching between appointed to retention we see about a 49% drop in curbs
+
+exp(curbs.poisson$coefficients[-1])
+```
+
+Now I will run a Negative Binomial model to check to see how this model compares and to see if there is a problem of overdispersion in the poisson
+
+```{r}
+library(MASS)
+
+curbs1.nb <- glm.nb(curbs ~ Moralistic + Traditionalistic + RepublicanLegslature + SplitLegislature + court_lower_dist + court_upper_dist + retention + partisan + nonpartisan + court_gov_dist + partisan_ideology_upper + partisan_ideology_lower + nonpartisan_ideology_upper + nonpartisan_ideology_lower + retention_ideology_lower + retention_ideology_upper + Professionalization,
+                     data = count_data)
+
+summary(curbs1.nb)
+```
+
+The Theta parameter (with the accompanying standard error) tells us that overdispersion is present and thus we should not be using a poisson model.  The Negative Binomial also has a lower AIC than the poisson giving even more evidence that the negaitve binomial is the better model.
+
+I forgot until now that I want to remove the governor from the model that looks at all bills because they are not really in the calculation for this.  The code below is a new model excluding the governor.
+
+```{r}
+curbs2.nb <- glm.nb(curbs ~ Moralistic + Traditionalistic + RepublicanLegslature + SplitLegislature + court_lower_dist + court_upper_dist + retention + partisan + nonpartisan + partisan_ideology_upper + partisan_ideology_lower + nonpartisan_ideology_upper + nonpartisan_ideology_lower + retention_ideology_lower + retention_ideology_upper + Professionalization,
+                     data = count_data)
+
+summary(curbs2.nb)
+```
+
+
+```{r}
+library(modelr)
+
+grid <- count_data %>%
+  data_grid(retention_ideology_upper, .model = curbs2.nb) %>%
+  add_predictions(curbs2.nb)
+  
+
+grid
+
+ggplot(grid, aes(retention_ideology_upper, pred)) +
+  geom_point()
+```
+
+```{r}
+curbs2.nb <- glm.nb(curbs ~ Moralistic + Traditionalistic + RepublicanLegslature + SplitLegislature + court_lower_dist + court_upper_dist + retention + partisan + nonpartisan + partisan_ideology_upper + partisan_ideology_lower + nonpartisan_ideology_upper + nonpartisan_ideology_lower + retention_ideology_lower + retention_ideology_upper + Professionalization,
+                     data = count_data)
+
+summary(curbs2.nb)
+```
+
+# Variations 
+
+```{r}
+# bare bones model: 
+curbs3.nb <- glm.nb(curbs ~ retention + partisan + nonpartisan,
+                     data = count_data)
+summary(curbs3.nb)
+```
+
+```{r}
+curbs4.nb <- glm.nb(curbs ~ court_lower_dist + court_upper_dist + retention + partisan + nonpartisan,
+                     data = count_data)
+summary(curbs4.nb)
+```
+
+```{r}
+curbs5.nb <- glm.nb(curbs ~ court_lower_dist + court_upper_dist + retention + partisan + nonpartisan + partisan_ideology_upper + partisan_ideology_lower + nonpartisan_ideology_upper + nonpartisan_ideology_lower + retention_ideology_lower + retention_ideology_upper,
+                     data = count_data)
+summary(curbs5.nb)
+```
+
+### Elected and Appointed 
+
+This section is looking at elected and appointed versus the broken down variable (with variations).  First, I need to create a variable that can capture elected versus appointed
+
+```{r}
+curbs.elected.nb <- glm.nb(curbs ~ elected,
+                     data = count_data)
+summary(curbs.elected.nb) # not significant
+```
+
+```{r}
+curbs.elected1.nb <- glm.nb(curbs ~ elected + court_upper_dist + court_lower_dist,
+                     data = count_data)
+summary(curbs.elected1.nb) # again, the upper house ideological distance variable is significant
+```
+
+```{r}
+curbs.elected2.nb <- glm.nb(curbs ~ elected + court_upper_dist + court_lower_dist + elected_ideology_lower + elected_ideology_upper,
+                     data = count_data)
+summary(curbs.elected2.nb) # upper is significant still
+```
+
+```{r}
+curbs.elected3.nb <- glm.nb(curbs ~ elected + court_upper_dist + court_lower_dist + elected_ideology_lower + elected_ideology_upper + Moralistic + Traditionalistic + RepublicanLegslature + SplitLegislature +  Professionalization,
+                     data = count_data)
+summary(curbs.elected3.nb)
+```
+
+
+### Up until 2012 data (problems with ideology)
+
+Getting data without the other years
+```{r}
+count_data2 <- gavelCultureControl %>%
+  filter(!(Year %in% c("2007", "43147", "2013", "2014", "2015", "2016", "2017", "2018"))) %>% # filtering out bad data
+  group_by(State, Year) %>% 
+  mutate(curbs = sum(curbing)) %>%
+  distinct(State, Year, .keep_all = TRUE) %>%
+  arrange(State, Year) 
+  
+count_data2
+```
+
+Adding in new variables
+```{r}
+count_data2$elected <- ifelse(count_data2$Elected == "Elected", 1, 0)
+count_data2$partisan <- ifelse(count_data2$MoreDefined == "Partisan", 1, 0)
+count_data2$nonpartisan <- ifelse(count_data2$MoreDefined == "Nonpartisan", 1, 0)
+count_data2$retention <- ifelse(count_data2$MoreDefined == "Retention", 1, 0)
+
+count_data2$elected_ideology_gov <- count_data2$elected * count_data2$court_gov_dist
+count_data2$elected_ideology_upper <- count_data2$elected * count_data2$court_upper_dist
+count_data2$elected_ideology_lower <- count_data2$elected * count_data2$court_lower_dist
+
+count_data2$partisan_ideology_gov <- count_data2$partisan * count_data2$court_gov_dist
+count_data2$partisan_ideology_upper <- count_data2$partisan * count_data2$court_upper_dist
+count_data2$partisan_ideology_lower <- count_data2$partisan * count_data2$court_lower_dist
+
+count_data2$nonpartisan_ideology_gov <- count_data2$nonpartisan * count_data2$court_gov_dist
+count_data2$nonpartisan_ideology_upper <- count_data2$nonpartisan * count_data2$court_upper_dist
+count_data2$nonpartisan_ideology_lower <- count_data2$nonpartisan * count_data2$court_lower_dist
+
+count_data2$retention_ideology_gov <- count_data2$retention * count_data2$court_gov_dist
+count_data2$retention_ideology_upper <- count_data2$retention * count_data2$court_upper_dist
+count_data2$retention_ideology_lower <- count_data2$retention * count_data2$court_lower_dist
+
+count_data2 <- left_join(count_data2, professionalization, by = c("Fullstate" = "State"))
+
+table(count_data2$Year, count_data2$Fullstate)
+```
+
+```{r}
+curbs_2.nb <- glm.nb(curbs ~ retention + partisan + nonpartisan,
+                     data = count_data2)
+summary(curbs_2.nb) # nothing significant
+```
+
+```{r}
+curbs2.elected1.nb <- glm.nb(curbs ~ elected + court_upper_dist + court_lower_dist,
+                     data = count_data2)
+summary(curbs2.elected1.nb) # upper distance is again distinct
+```
+
+```{r}
+curbs2.elected2.nb <- glm.nb(curbs ~ elected + court_upper_dist + court_lower_dist + elected_ideology_lower + elected_ideology_upper,
+                     data = count_data2)
+summary(curbs2.elected2.nb) # nothing significant
+```
+
+```{r}
+curbs2.elected3.nb <- glm.nb(curbs ~ elected + court_upper_dist + court_lower_dist + elected_ideology_lower + elected_ideology_upper + Moralistic + Traditionalistic + RepublicanLegslature + SplitLegislature +  Professionalization,
+                     data = count_data2)
+summary(curbs2.elected3.nb)
+```
+
+```{r}
+curbs2_full.nb <- glm.nb(curbs ~ Moralistic + Traditionalistic + RepublicanLegslature + SplitLegislature + court_lower_dist + court_upper_dist + retention + partisan + nonpartisan + partisan_ideology_upper + partisan_ideology_lower + nonpartisan_ideology_upper + nonpartisan_ideology_lower + retention_ideology_lower + retention_ideology_upper + Professionalization,
+                     data = count_data2)
+
+summary(curbs2_full.nb) # none of my important variables are predictive
+```
+
