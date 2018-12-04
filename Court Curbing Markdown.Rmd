@@ -11,16 +11,15 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Summary
 
-See notes section for a breakdown of the different model variations and the robustness of the results
 
 
 # Ideas
 
 Create figures that show the ideological distance by type (I may have already done this)
-Run models of elections without the ideological distance variables
 
 # Questions
 
+* The percentages object potentially has a denominator problem (small n, wild differences based off of one change)
 
 # Reading in Data
 ```{r, packages, message=FALSE}
@@ -512,3 +511,37 @@ curbs2_full.nb <- glm.nb(curbs ~ Moralistic + Traditionalistic + RepublicanLegsl
 summary(curbs2_full.nb) # none of my important variables are predictive
 ```
 
+
+# Post-Steigerwalt Meeting (End of November 2018)
+
+Suggestions from Steigerwalt:
+
+* What percentage of all legislation that year that deal with courts are court curbing bills (4 court curbing out of 20 bills)?  Run a regression with that
+* Do unified/divided instead of the republican/democratic/split
+* map out upper and partisan interaction (plot it out).  This applies, right now, to the count models
+* Question: is the full model overfitted?
+
+
+## Percentage of all legislation that year
+
+```{r}
+percent_curbing <- gavelCultureControl %>%
+  group_by(Fullstate, Year) %>%
+  summarise(percentage = sum(curbing)/n()) 
+  
+percent_curbing <- percent_curbing %>%
+  left_join(count_data, by = c("Fullstate", "Year")) %>%
+  dplyr::select(-5:-6, -9:-17) 
+
+percent_curbing
+```
+
+One of the first things I notice is that Alaska in 2017 has a score of 1, but that is really only because in 2017 there is only one bill that is dealing with the courts and that is a curbing bill.  How should that really be counted?  It feels like there should be some kind of weighting measure, but will have to discuss with Steigerwalt.
+```{r}
+gavelCultureControl %>%
+  filter(Fullstate == "Alaska" & Year == 2017)
+```
+
+## Next Steps
+
+Run a regular regression with the new dependent variable.  Do the different iterations
