@@ -545,3 +545,70 @@ gavelCultureControl %>%
 ## Next Steps
 
 Run a regular regression with the new dependent variable.  Do the different iterations
+
+It appears, from the graph below, that there is a slight difference in the means between the two.  A simple t-test should show us that.
+```{r}
+percent_curbing %>%
+  filter(!is.na(Elected)) %>%
+  ggplot() +
+    geom_histogram(aes(percentage, y = ..density.., fill = Elected)) +
+    facet_wrap(~ Elected)
+```
+
+
+A simple t-test shows that there is a statistically significant differnece between the two and that the mean of Elected states is significantly higher than the mean of appointed courts.
+```{r}
+t.test(percentage ~ Elected, data = percent_curbing)
+```
+
+Now let's try a simple linear model:
+
+```{r}
+percent_md <- lm(percentage ~ Elected, data = percent_curbing)
+summary(percent_md)
+```
+
+Now we are starting to get some significance.  Let's start with some more variables and see what happens
+
+```{r}
+percent_md_1 <- lm(percentage ~ elected + court_upper_dist + court_lower_dist, 
+                    data = percent_curbing)
+summary(percent_md_1) # elected is still significant and positive
+```
+
+Adding in interaction terms
+```{r}
+percent_md_2 <- lm(percentage ~ elected + court_upper_dist + court_lower_dist + elected_ideology_upper + elected_ideology_lower, 
+                    data = percent_curbing)
+
+summary(percent_md_2) # elected is still positive and significant.  Nothing else is close
+```
+Adding in political culture
+```{r}
+percent_md_3 <- lm(percentage ~ elected + court_upper_dist + court_lower_dist + elected_ideology_upper + elected_ideology_lower +
+                     Moralistic + Traditionalistic, 
+                    data = percent_curbing)
+summary(percent_md_3) # election is still positive and significant.  Nothing else is. 
+```
+
+adding in professionalization
+```{r}
+percent_md_4 <- lm(percentage ~ elected + court_upper_dist + court_lower_dist + elected_ideology_upper + elected_ideology_lower +
+                     Moralistic + Traditionalistic + Professionalization, 
+                    data = percent_curbing)
+
+summary(percent_md_4) # elected is positive and significant.  Professionalization is positive and significant
+```
+
+adding in unified government.  This would constitute the full model
+```{r}
+percent_curbing <- percent_curbing %>%
+  mutate(unified = ifelse(SplitLegislature == 0, 1, 0))
+
+percent_md_5 <- lm(percentage ~ elected + court_upper_dist + court_lower_dist + elected_ideology_upper + elected_ideology_lower +
+                     Moralistic + Traditionalistic + Professionalization + unified, 
+                    data = percent_curbing)
+summary(percent_md_5) # elected hangs on at the .1 significance level.  Traditionalistic is positive and sig at .1, professionalization is positive and sig at .1, unified is negative (DON'T KNOW WHY) and significant at .05.
+```
+
+Takeaway: Elected really is significant and robust to multiple variations.
