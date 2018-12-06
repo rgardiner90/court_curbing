@@ -612,3 +612,25 @@ summary(percent_md_5) # elected hangs on at the .1 significance level.  Traditio
 ```
 
 Takeaway: Elected really is significant and robust to multiple variations.
+
+
+## Model diagnostics
+
+Adding the predicted and residual values
+```{r}
+percent_curbing  <- percent_curbing %>%
+  filter(!is.na(Elected)) %>%
+  add_predictions(percent_md_5) %>%
+  add_residuals(percent_md_5) %>%
+  filter(!is.na(resid))
+```
+
+Checking normal distribution.  It is pretty good, but there are some outliers at the far right.  The mean of the residual is: `r mean(percent_curbing$resid)` which is rather small. 
+```{r}
+ggplot(percent_curbing, aes(resid)) +
+  geom_histogram()
+```
+
+```{r}
+plot(percent_md_5)
+```
