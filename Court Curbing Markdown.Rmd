@@ -9,13 +9,18 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# Next steps
+
+DO IDEOLOGY WITH FEWER YEARS (MORE PROPER), THEN DO FULLER MODELS WITHOUT IDEOLOGY
+
+
 # Summary
 
 
 
 # Ideas
 
-Create figures that show the ideological distance by type (I may have already done this)
+
 
 # Questions
 
@@ -60,11 +65,12 @@ gavelCultureControl$Culture <- ifelse(gavelCultureControl$Moralistic == 1, "Mora
                                              "Individualistic"))
 table(gavelCultureControl$Culture, gavelCultureControl$Culture)
 
-gavelCultureControl$legislativeControl <- ifelse(gavelCultureControl$RepublicanLegslature == 1, "Republican", 
+gavelCultureControl$legislativeControl <- ifelse(gavelCultureControl$SplitLegislature == 1, "0", 
                                                  ifelse(gavelCultureControl$SplitLegislature == 1, "Split",
                                                         "Democratic"))
-table(gavelCultureControl$legislativeControl, gavelCultureControl$legislativeControl)
 
+gavelCultureControl$unified <- ifelse(gavelCultureControl$SplitLegislature == 0, 1, 0)
+table(gavelCultureControl$legislativeControl, gavelCultureControl$unified)
 ```
 
 # Initial Analysis
@@ -521,9 +527,18 @@ Suggestions from Steigerwalt:
 * map out upper and partisan interaction (plot it out).  This applies, right now, to the count models
 * Question: is the full model overfitted?
 
+## Doing Unified government
+
+Full model
+```{r}
+curbs_unified.nb <- glm.nb(curbs ~ Moralistic + Traditionalistic + unified + court_lower_dist + court_upper_dist + elected + elected_ideology_upper + elected_ideology_lower + Professionalization,
+                     data = count_data2)
+
+summary(curbs_unified.nb) # traditionalistic, professionalization, and unified are significant and positive.
+```
+
 
 ## Percentage of all legislation that year
-
 ```{r}
 percent_curbing <- gavelCultureControl %>%
   group_by(Fullstate, Year) %>%
@@ -542,9 +557,7 @@ gavelCultureControl %>%
   filter(Fullstate == "Alaska" & Year == 2017)
 ```
 
-## Next Steps
 
-Run a regular regression with the new dependent variable.  Do the different iterations
 
 It appears, from the graph below, that there is a slight difference in the means between the two.  A simple t-test should show us that.
 ```{r}
@@ -612,6 +625,43 @@ summary(percent_md_5) # elected hangs on at the .1 significance level.  Traditio
 ```
 
 Takeaway: Elected really is significant and robust to multiple variations.
+
+```{r}
+percent_curbing2 <- percent_curbing %>%
+  filter(!is.na(Elected)) %>%
+  filter(!(Year %in% c("2007", "43147", "2013", "2014", "2015", "2016", "2017", "2018")))  # filtering out bad data
+
+percent_curbing2
+
+percent_md_6 <- lm(percentage ~ elected + court_upper_dist + court_lower_dist + elected_ideology_upper + elected_ideology_lower +
+                     Moralistic + Traditionalistic + Professionalization + unified, 
+                    data = percent_curbing2) # full model, not good
+
+percent_md_7 <- lm(percentage ~ elected, 
+                    data = percent_curbing2)
+summary(percent_md_7)
+
+percent_md_8 <- lm(percentage ~ elected + court_upper_dist + court_lower_dist, 
+                    data = percent_curbing2)
+summary(percent_md_8)
+
+percent_md_9 <- lm(percentage ~ elected + court_upper_dist + court_lower_dist + elected_ideology_upper + elected_ideology_lower, 
+                    data = percent_curbing2)
+summary(percent_md_9) # nothing sig
+
+percent_md_10 <- lm(percentage ~ elected + court_upper_dist + court_lower_dist + elected_ideology_upper + elected_ideology_lower + Moralistic + Traditionalistic, 
+                    data = percent_curbing2)
+summary(percent_md_10) # nothing sig
+
+percent_md_11 <- lm(percentage ~ elected + court_upper_dist + court_lower_dist + elected_ideology_upper + elected_ideology_lower + Moralistic + Traditionalistic + Professionalization, 
+                    data = percent_curbing2) # professionalization is sig
+summary(percent_md_11)
+```
+
+
+### takeaway
+
+Using less data (fewer years), the model is no longer significant.  Maybe run smaller model with ideology and then full model without ideology!!!!!!
 
 
 ## Model diagnostics
