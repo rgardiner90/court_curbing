@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Next steps
 
-DO IDEOLOGY WITH FEWER YEARS (MORE PROPER), THEN DO FULLER MODELS WITHOUT IDEOLOGY
+
 
 
 # Summary
@@ -661,17 +661,37 @@ summary(percent_md_11)
 
 ### takeaway
 
-Using less data (fewer years), the model is no longer significant.  Maybe run smaller model with ideology and then full model without ideology!!!!!!
+Using less data (fewer years), the model is no longer significant.  DO IDEOLOGY WITH FEWER YEARS (MORE PROPER), THEN DO FULLER MODELS WITHOUT IDEOLOGY.
+
+# Final Models:
+
+I will use these as the official models with the broken down models in an appendix.
+```{r}
+## Shorter years
+summary(percent_md_7) # just elected
+summary(percent_md_8) # elected and ideology
+summary(percent_md_9) # elected interacted with ideology nothing sig
+summary(percent_md_6) # full model with ideology and shorter years
+
+
+## Full years, no ideology
+percent_md_no_id_1 <- lm(percentage ~ elected + Moralistic + Traditionalistic + Professionalization + unified, data = percent_curbing)
+summary(percent_md_no_id_1) # full model (excluding ideology)
+
+percent_md_no_id_2 <- lm(percentage ~ elected, data = percent_curbing)
+summary(percent_md_no_id_2) # sig, by itself
+```
 
 
 ## Model diagnostics
 
+### No Ideology:
 Adding the predicted and residual values
 ```{r}
 percent_curbing  <- percent_curbing %>%
   filter(!is.na(Elected)) %>%
-  add_predictions(percent_md_5) %>%
-  add_residuals(percent_md_5) %>%
+  add_predictions(percent_md_no_id_1) %>%
+  add_residuals(percent_md_no_id_1) %>%
   filter(!is.na(resid))
 ```
 
@@ -682,5 +702,56 @@ ggplot(percent_curbing, aes(resid)) +
 ```
 
 ```{r}
-plot(percent_md_5)
+plot(percent_md_no_id_1)
 ```
+
+
+### Shorter years, but ideology
+
+```{r}
+percent_curbing2  <- percent_curbing2 %>%
+  filter(!is.na(Elected)) %>%
+  add_predictions(percent_md_6) %>%
+  add_residuals(percent_md_6) %>%
+  filter(!is.na(resid))
+```
+
+
+Checking normal distribution.  It is pretty good, but there are some outliers at the far right.  The mean of the residual is: `r mean(percent_curbing2$resid)` which is rather small. 
+```{r}
+ggplot(percent_curbing2, aes(resid)) +
+  geom_histogram()
+```
+
+```{r}
+plot(percent_md_6)
+```
+
+It does struggle on the outer edges of X.
+
+
+### Concerns with the proportion DV
+
+I am worried that the proportion of all court curbing legislation in one year for a given state is so small that changing the numerator by 1 will produce wild swings.  Let's check this out:
+
+```{r}
+d <- ggplot(percent_curbing) +
+  geom_histogram(aes(x = percentage, y = ..density..)) +
+  labs(x = "Proportion of Bills that Curb Courts")
+```
+
+The chart above shows the distribution of proportions.  This is somewhat unsuripring in the distribution, but now lets look at the total number of legislation in a given year.
+
+```{r}
+bills_state_year <- gavelFull %>%
+  group_by(Fullstate, Year) %>%
+  count()
+  
+e <- ggplot(bills_state_year) +
+  geom_histogram(aes(x = n, y = ..density..)) +
+  labs(x = "Number of Bills in a Year")
+
+gridExtra::grid.arrange(d, e, ncol = 2)
+```
+
+There graph shows that while there are instances of a large number of legislation concerning the court, the median is `r median(bills_state_year$n)` with a mode of 1.  
