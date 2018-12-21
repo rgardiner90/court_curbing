@@ -666,6 +666,8 @@ Using less data (fewer years), the model is no longer significant.  DO IDEOLOGY 
 # Final Models:
 
 I will use these as the official models with the broken down models in an appendix.
+
+## Final Models - Percentage DV
 ```{r}
 ## Shorter years
 summary(percent_md_7) # just elected
@@ -682,6 +684,31 @@ percent_md_no_id_2 <- lm(percentage ~ elected, data = percent_curbing)
 summary(percent_md_no_id_2) # sig, by itself
 ```
 
+
+## Final Models - Count
+
+```{r}
+# shorter years (with ideology included)
+summary(curbs_unified.nb) # full model
+exp(curbs_unified.nb$coefficients)
+
+
+curbs2.elected0.nb <- glm.nb(curbs ~ elected, data = count_data2)
+summary(curbs2.elected0.nb) # just elected
+
+summary(curbs2.elected1.nb) # elected and ideology (no iteractions)
+summary(curbs2.elected2.nb) # elected and ideology (interacted)
+
+
+
+# longer years (no ideology)
+summary(curbs.elected.nb) # just elected
+
+curbs.elected.unified.nb <- glm.nb(curbs ~ Moralistic + Traditionalistic + unified +  elected + Professionalization,
+                     data = count_data)
+summary(curbs.elected.unified.nb) # full model
+
+```
 
 ## Model diagnostics
 
