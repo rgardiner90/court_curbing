@@ -699,7 +699,7 @@ summary(curbs2.elected0.nb) # just elected
 summary(curbs2.elected1.nb) # elected and ideology (no iteractions)
 summary(curbs2.elected2.nb) # elected and ideology (interacted)
 
-
+exp(curbs2.elected1.nb$coefficients)
 
 # longer years (no ideology)
 summary(curbs.elected.nb) # just elected
@@ -707,6 +707,8 @@ summary(curbs.elected.nb) # just elected
 curbs.elected.unified.nb <- glm.nb(curbs ~ Moralistic + Traditionalistic + unified +  elected + Professionalization,
                      data = count_data)
 summary(curbs.elected.unified.nb) # full model
+exp(curbs.elected.unified.nb$coefficients)
+
 
 ```
 
@@ -782,3 +784,23 @@ gridExtra::grid.arrange(d, e, ncol = 2)
 ```
 
 There graph shows that while there are instances of a large number of legislation concerning the court, the median is `r median(bills_state_year$n)` with a mode of 1.  
+
+
+## Testing out the idea of splitting up the electoral variable
+
+This is primarily in response to the poor showing of election.
+```{r}
+test <- glm.nb(curbs ~ Moralistic + Traditionalistic + unified +  partisan + nonpartisan + retention + Professionalization,
+                     data = count_data)
+summary(test)
+
+test2 <- glm.nb(curbs ~ partisan + nonpartisan + retention,
+                     data = count_data)
+summary(test2)
+
+```
+
+
+
+
+
