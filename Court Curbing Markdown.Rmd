@@ -156,18 +156,20 @@ grid.arrange(a,b,c)
 ideology_gov_year <- gavelCultureControl %>% 
   group_by(MoreDefined, Year) %>%
   filter(!is.na(court_gov_dist)) %>%
-  summarise(govMean = mean(court_gov_dist))
+  summarise(govMean = mean(court_gov_dist)) %>%
+  filter(!is.na(govMean))
 
 ideology_upper_year <- gavelCultureControl %>% 
   group_by(MoreDefined, Year) %>%
   filter(!is.na(court_upper_dist)) %>%
-  summarise(upperMean = mean(court_upper_dist))
-
+  summarise(upperMean = mean(court_upper_dist)) %>%
+  filter(!is.na(upperMean))
+  
 ideology_lower_year <- gavelCultureControl %>% 
   group_by(MoreDefined, Year) %>%
   filter(!is.na(court_lower_dist)) %>%
   summarise(lowerMean = mean(court_lower_dist))
-
+  filter(!is.na(lowerMean)) %>%
 ## graphing the data
 d <- ggplot(data = ideology_gov_year) +
   geom_line(aes(x = Year, y = govMean, color = MoreDefined)) +
