@@ -157,37 +157,39 @@ ideology_gov_year <- gavelCultureControl %>%
   group_by(MoreDefined, Year) %>%
   filter(!is.na(court_gov_dist)) %>%
   summarise(govMean = mean(court_gov_dist)) %>%
-  filter(!is.na(govMean))
+  filter(!(Year %in% c("2007", "43147", "2013", "2014", "2015", "2016", "2017", "2018"))) # filtering out bad data
+
 
 ideology_upper_year <- gavelCultureControl %>% 
   group_by(MoreDefined, Year) %>%
   filter(!is.na(court_upper_dist)) %>%
   summarise(upperMean = mean(court_upper_dist)) %>%
-  filter(!is.na(upperMean))
+  filter(!(Year %in% c("2007", "43147", "2013", "2014", "2015", "2016", "2017", "2018"))) # filtering out bad data
   
 ideology_lower_year <- gavelCultureControl %>% 
   group_by(MoreDefined, Year) %>%
   filter(!is.na(court_lower_dist)) %>%
-  summarise(lowerMean = mean(court_lower_dist))
-  filter(!is.na(lowerMean)) %>%
+  summarise(lowerMean = mean(court_lower_dist)) %>%
+  filter(!(Year %in% c("2007", "43147", "2013", "2014", "2015", "2016", "2017", "2018"))) # filtering out bad data
+
 ## graphing the data
 d <- ggplot(data = ideology_gov_year) +
   geom_line(aes(x = Year, y = govMean, color = MoreDefined)) +
-  scale_x_continuous(breaks = c(2007, 2009, 2011, 2013, 2015, 2017)) +
+  scale_x_continuous(breaks = c(2008, 2009, 2010, 2011, 2012)) +
   xlab(NULL) +
   ylab("Mean: Court - Governor") +
   labs(colour = "Selection")
 
 e <- ggplot(data = ideology_upper_year) +
   geom_line(aes(x = Year, y = upperMean, color = MoreDefined)) +
-  scale_x_continuous(breaks = c(2007, 2009, 2011, 2013, 2015, 2017)) +
+  scale_x_continuous(breaks = c(2008, 2009, 2010, 2011, 2012)) +
   xlab(NULL) +
   ylab("Mean: Court - Upper") +
   labs(colour = "Selection")
 
 f <- ggplot(data = ideology_lower_year) +
   geom_line(aes(x = Year, y = lowerMean, color = MoreDefined)) +
-  scale_x_continuous(breaks = c(2007, 2009, 2011, 2013, 2015, 2017)) +
+  scale_x_continuous(breaks = c(2008, 2009, 2010, 2011, 2012)) +
   xlab(NULL) +
   ylab("Mean: Court - Lower") +
   labs(colour = "Selection")
@@ -203,6 +205,7 @@ grid.arrange(d,e,f)
 The code below creates scatter plots that show the relationship between ideological distance and court curbing legislation.  Note the difference in scales!  Unsurprisingly, there appears to be the weakest relationship between curbs and ideological distance between the Court and Governor. 
 ```{r}
 g <- gavelCultureControl %>%
+  filter(!(Year %in% c("2007", "43147", "2013", "2014", "2015", "2016", "2017", "2018"))) %>% # filtering out bad data
   group_by(Fullstate) %>%
   filter(!is.na(court_lower_dist)) %>%
   summarise(sum = sum(curbing),
@@ -210,11 +213,11 @@ g <- gavelCultureControl %>%
   ggplot() +
   geom_point(aes(x = avg_ideology, y = sum)) +
   ylab(NULL) +
-  xlab("Court and Lower Chamber") +
-  geom_smooth(aes(x = avg_ideology, y = sum))
+  xlab("Court and Lower Chamber") 
 
 
 h <- gavelCultureControl %>%
+  filter(!(Year %in% c("2007", "43147", "2013", "2014", "2015", "2016", "2017", "2018"))) %>% # filtering out bad data
   group_by(Fullstate) %>%
   filter(!is.na(court_upper_dist)) %>%
   summarise(sum = sum(curbing),
@@ -222,10 +225,10 @@ h <- gavelCultureControl %>%
   ggplot() +
   geom_point(aes(x = avg_ideology, y = sum)) +
   ylab("Court Curbing Introductions") +
-  xlab("Court and Upper Chamber") +
-  geom_smooth(aes(x = avg_ideology, y = sum))
+  xlab("Court and Upper Chamber")
 
 i <- gavelCultureControl %>%
+  filter(!(Year %in% c("2007", "43147", "2013", "2014", "2015", "2016", "2017", "2018"))) %>% # filtering out bad data
   group_by(Fullstate) %>%
   filter(!is.na(court_gov_dist)) %>%
   summarise(sum = sum(curbing),
@@ -233,8 +236,7 @@ i <- gavelCultureControl %>%
   ggplot() +
   geom_point(aes(x = avg_ideology, y = sum)) +
   ylab(NULL) +
-  xlab("Court and Governor") +
-  geom_smooth(aes(x = avg_ideology, y = sum))
+  xlab("Court and Governor") 
   
 grid.arrange(g, h, i)
 ```
@@ -684,6 +686,12 @@ summary(percent_md_no_id_1) # full model (excluding ideology)
 
 percent_md_no_id_2 <- lm(percentage ~ elected, data = percent_curbing)
 summary(percent_md_no_id_2) # sig, by itself
+
+
+
+# predictions
+
+
 ```
 
 
