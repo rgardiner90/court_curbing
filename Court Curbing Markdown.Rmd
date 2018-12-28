@@ -689,11 +689,55 @@ summary(percent_md_no_id_2) # sig, by itself
 
 
 
-# predictions
-
-
 ```
 
+
+### Predictions
+
+```{r}
+percent_curbing2_predictions <- percent_curbing2 %>%
+  add_predictions(percent_md_6)
+
+ggplot(data = percent_curbing2_predictions) +
+  geom_boxplot(aes(x = as.factor(Professionalization), y = pred)) +
+  xlab("Level of Professionalization") +
+  ylab("Predicted Percentage")
+
+ggplot(data = percent_curbing2_predictions) +
+  geom_boxplot(aes(x = as.factor(elected), y = pred)) +
+  ylab("Predicted Percentage") +
+  xlab("Elected Versus Appointed") +
+  scale_x_discrete(labels = c("0" = "Appointed", "1" = "Elected"))
+
+j <- ggplot(data = percent_curbing2_predictions) +
+  geom_point(aes(x = court_lower_dist, y = pred)) +
+  ylab("Predicted Percentage") +
+  xlab("Ideological Distance from Lower Chamber")
+
+k <- ggplot(data = percent_curbing2_predictions) +
+  geom_point(aes(x = court_upper_dist, y = pred)) +
+  ylab("Predicted Percentage") +
+  xlab("Ideological Distance from Upper Chamber")
+  
+grid.arrange(j, k)
+
+
+percent_curbing_predictions <- percent_curbing %>%
+  add_predictions(percent_md_no_id_1)
+
+ggplot(data = percent_curbing_predictions) +
+  geom_boxplot(aes(x = as.factor(Professionalization), y = pred)) +
+  xlab("Level of Professionalization") +
+  ylab("Predicted Percentage")
+
+
+ggplot(data = percent_curbing_predictions) +
+  geom_boxplot(aes(x = as.factor(elected), y = pred)) +
+  xlab("Elected Versus Appointed") +
+  ylab("Predicted Percentage") +
+  scale_x_discrete(labels = c("0" = "Appointed", "1" = "Elected"))
+
+```
 
 ## Final Models - Count
 
@@ -718,8 +762,55 @@ curbs.elected.unified.nb <- glm.nb(curbs ~ Moralistic + Traditionalistic + unifi
                      data = count_data)
 summary(curbs.elected.unified.nb) # full model
 exp(curbs.elected.unified.nb$coefficients)
+```
 
 
+### Adding predictions for Count Data
+
+```{r}
+count_data2_predictions <- count_data2 %>%
+  add_predictions(curbs_unified.nb)
+
+ggplot(data = count_data2_predictions) +
+  geom_boxplot(aes(x = as.factor(Professionalization), y = pred)) +
+  ylab("Predicted Count") +
+  xlab("Level of Professionalization")
+
+ggplot(data = count_data2_predictions) +
+  geom_boxplot(aes(x = as.factor(elected), y = pred)) +
+  ylab("Predicted Count") +
+  xlab("Elected Versus Appointed") +
+  scale_x_discrete(labels = c("0" = "Appointed", "1" = "Elected"))
+
+l <- ggplot(data = count_data2_predictions) +
+  geom_point(aes(x = court_lower_dist, y = pred)) +
+  ylab("Predicted Count") +
+  xlab("Ideological Distance from Lower Chamber")
+
+m <- ggplot(data = count_data2_predictions) +
+  geom_point(aes(x = court_upper_dist, y = pred)) +
+  ylab("Predicted Count") +
+  xlab("Ideological Distance from Upper Chamber")
+
+grid.arrange(l, m)
+
+# Now without ideology 
+count_data_predictions <- count_data %>%
+  add_predictions(curbs.elected.unified.nb) 
+
+# added jitter because it was so weird
+ggplot(data = count_data_predictions) +
+  geom_boxplot(aes(x = as.factor(Professionalization), y = pred)) +
+  ylab("Predicted Count") +
+  xlab("Level of Professinalization") +
+  geom_jitter(aes(x = as.factor(Professionalization), y = pred))
+
+ggplot(data = count_data_predictions) +
+  geom_boxplot(aes(x = as.factor(elected), y = pred)) +
+  ylab("Predicted Count") +
+  xlab("Elected Versus Appointed") +
+  scale_x_discrete(labels = c("0" = "Appointed", "1" = "Elected"))
+  
 ```
 
 ## Model diagnostics
