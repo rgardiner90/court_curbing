@@ -701,40 +701,41 @@ percent_curbing2_predictions <- percent_curbing2 %>%
 ggplot(data = percent_curbing2_predictions) +
   geom_boxplot(aes(x = as.factor(Professionalization), y = pred)) +
   xlab("Level of Professionalization") +
-  ylab("Predicted Percentage")
+  ylab("Predicted Proportion")
 
 ggplot(data = percent_curbing2_predictions) +
   geom_boxplot(aes(x = as.factor(elected), y = pred)) +
-  ylab("Predicted Percentage") +
+  ylab("Predicted Proportion") +
   xlab("Elected Versus Appointed") +
   scale_x_discrete(labels = c("0" = "Appointed", "1" = "Elected"))
 
 j <- ggplot(data = percent_curbing2_predictions) +
   geom_point(aes(x = court_lower_dist, y = pred)) +
-  ylab("Predicted Percentage") +
+  ylab("Predicted Proportion") +
   xlab("Ideological Distance from Lower Chamber")
 
 k <- ggplot(data = percent_curbing2_predictions) +
   geom_point(aes(x = court_upper_dist, y = pred)) +
-  ylab("Predicted Percentage") +
+  ylab("Predicted Proportion") +
   xlab("Ideological Distance from Upper Chamber")
   
 grid.arrange(j, k)
 
 
+## without ideology
 percent_curbing_predictions <- percent_curbing %>%
   add_predictions(percent_md_no_id_1)
 
 ggplot(data = percent_curbing_predictions) +
   geom_boxplot(aes(x = as.factor(Professionalization), y = pred)) +
   xlab("Level of Professionalization") +
-  ylab("Predicted Percentage")
+  ylab("Predicted Proportion")
 
 
 ggplot(data = percent_curbing_predictions) +
   geom_boxplot(aes(x = as.factor(elected), y = pred)) +
   xlab("Elected Versus Appointed") +
-  ylab("Predicted Percentage") +
+  ylab("Predicted Proportion") +
   scale_x_discrete(labels = c("0" = "Appointed", "1" = "Elected"))
 
 ```
@@ -787,12 +788,24 @@ l <- ggplot(data = count_data2_predictions) +
   ylab("Predicted Count") +
   xlab("Ideological Distance from Lower Chamber")
 
+
 m <- ggplot(data = count_data2_predictions) +
   geom_point(aes(x = court_upper_dist, y = pred)) +
   ylab("Predicted Count") +
   xlab("Ideological Distance from Upper Chamber")
 
 grid.arrange(l, m)
+
+grid <- count_data2 %>%
+  data_grid(court_upper_dist, .model = curbs_unified.nb) %>%
+  add_predictions(curbs_unified.nb)
+
+
+ggplot(grid, aes(court_upper_dist, pred)) +
+  geom_point() +
+  ylab("Predicted Count") +
+  xlab("Simulated Ideological Distance from Upper Chamber")
+
 
 # Now without ideology 
 count_data_predictions <- count_data %>%
@@ -903,5 +916,141 @@ summary(test2)
 
 
 
+
+
+# Additional EDA
+
+This section is mainly present to get rid of the Tableau graphs
+
+
+```{r}
+gavelCultureControlOnlyCurbs %>%
+  count(Year) %>%
+  filter(Year > 2007) %>%
+  mutate(Year = as.Date(as.character(Year), format = "%Y")) %>%
+  ggplot(aes(x = Year, y = n)) +
+  geom_line() +
+  scale_x_date() +
+  ylim(c(0,250)) +
+  ylab("Total Number of Court Curing Legislation Introducted") +
+  theme_light()
+
+# ggsave("Curbs over time.jpeg")
+
+
+gavelCultureControlOnlyCurbs %>%
+  count(Type) %>%
+  mutate(Type = fct_reorder(Type, n)) %>%
+  ggplot(aes(Type, n)) +
+  geom_bar(stat = "identity") +
+  ylab("Number of Court Curbing Legislation Introduced") +
+  coord_flip() +
+  theme_light() 
+
+# ggsave("curbs by type.jpeg")
+
+gavelCultureControlOnlyCurbs %>%
+  count(RichardLastAction) %>%
+  mutate(RichardLastAction = fct_reorder(RichardLastAction, n)) %>%
+  ggplot(aes(RichardLastAction, n)) +
+  geom_bar(stat = "identity") +
+  ylab("Number of Bills") +
+  xlab("Final Outcome") +
+  coord_flip() +
+  theme_light()
+
+# ggsave("curbs by final outcome.jpeg")
+
+gavelCultureControlOnlyCurbs %>%
+  group_by(Fullstate, MoreDefined, Year) %>%
+  summarize(total_curbs = sum(curbing)) %>%
+  ungroup() %>%
+  group_by(MoreDefined) %>%
+  summarize(mean = mean(total_curbs)) %>%
+  mutate(MoreDefined = fct_reorder(MoreDefined, mean)) %>%
+  ggplot(aes(MoreDefined, mean)) +
+  geom_col() +
+  ylab("Average Number of Bills in a Year for a State in a Given Selection System") +
+  xlab("Selection System") +
+  coord_flip() +
+  theme_light()
+
+ggsave("Average curbs by system.jpeg")
+
+gavelCultureControlOnlyCurbs %>%
+  group_by(Fullstate, MoreDefined, Year) %>%
+  summarize(total_curbs = sum(curbing)) %>%
+  filter(Year != 2007) %>%
+  ungroup() %>%
+  group_by(MoreDefined, Year) %>%
+  summarize(mean = mean(total_curbs)) %>%
+  ungroup(MoreDefined) %>%
+  mutate(MoreDefined = fct_reorder(MoreDefined, mean),
+          Year = as.Date(as.character(Year), format = "%Y")) %>%
+  ggplot(aes(Year, mean, color = MoreDefined)) +
+  geom_line() +
+  ylab("Average Number of Bills for a State By Selection System") +
+  xlab("Selection System") +
+  theme_light() +
+  scale_x_date() +
+  ylim(c(0, 10)) +
+  scale_color_discrete(name = "Selection System")
+
+# ggsave("averages over time and selection.jpeg")
+
+count_data %>%
+  group_by(Fullstate, Professionalization, elected) %>%
+  summarize(curbs = sum(curbs, na.rm = TRUE)) %>%
+  ggplot(aes(Professionalization, curbs, color = as.factor(elected))) +
+  geom_jitter() +
+  scale_color_discrete(name = "Selection System",
+                       breaks = c(0, 1),
+                       labels = c("Appointed", "Elected")) +
+  theme_light() +
+  xlab("Level of Professionalization") +
+  ylab("Number of Curbs by State")
+
+ggsave("curbs by professionalization.jpeg")
+```
+
+```{r}
+library(usmap)
+library(maps)
+
+
+all_states <- map_data("state")
+
+capitals <- us.cities %>%
+  filter(capital == 2) %>%
+  left_join(gavelCultureControlOnlyCurbs, by = c("country.etc" = "State")) %>%
+  group_by(country.etc, lat, long, MoreDefined) %>%
+  count() %>%
+  filter(!(country.etc %in% c("AK", "HI")))
+
+
+capitals <- as_tibble(capitals)
+
+str(capitals)
+
+gavelCultureControlOnlyCurbs$Fullstate <- tolower(gavelCultureControlOnlyCurbs$Fullstate)
+
+
+gavelCultureControlOnlyCurbs %>%
+  group_by(Fullstate, MoreDefined) %>%
+  count() %>%
+  left_join(all_states, by = c("Fullstate" = "region")) %>%
+  ggplot() +
+  geom_polygon(aes(x = long, y = lat, group = group, fill = MoreDefined), alpha = 0.3) +
+  geom_point(data = capitals, aes(x = long, y = lat, size = n), show.legend = FALSE) +
+  theme_light() +
+  xlab("") +
+  ylab("") +
+  theme_void() +
+  labs(caption = "Larger Circles indicate More Curbs") +
+  scale_fill_discrete(name = "Selection System")
+
+
+# ggsave("map of curbs.jpeg")
+```
 
 
