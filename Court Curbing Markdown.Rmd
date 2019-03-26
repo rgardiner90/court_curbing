@@ -1041,12 +1041,12 @@ gavelCultureControlOnlyCurbs %>%
   left_join(all_states, by = c("Fullstate" = "region")) %>%
   ggplot() +
   geom_polygon(aes(x = long, y = lat, group = group, fill = MoreDefined), alpha = 0.3) +
-  geom_point(data = capitals, aes(x = long, y = lat, size = n), show.legend = FALSE) +
+  geom_point(data = capitals, aes(x = long, y = lat, size = n, color = "blue"), show.legend = FALSE) +
   theme_light() +
   xlab("") +
   ylab("") +
   theme_void() +
-  labs(caption = "Larger Circles indicate More Curbs") +
+  labs(caption = "Larger Circles Indicate More Curbs") +
   scale_fill_discrete(name = "Selection System")
 
 
