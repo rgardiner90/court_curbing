@@ -1054,3 +1054,23 @@ gavelCultureControlOnlyCurbs %>%
 ```
 
 
+```{r}
+gavelCultureControlOnlyCurbs %>%
+  group_by(Fullstate, MoreDefined) %>%
+  count() %>%
+  left_join(all_states, by = c("Fullstate" = "region")) %>%
+  ggplot() +
+  geom_point(data = capitals, aes(x = long, y = lat, size = n, color = MoreDefined)) +
+  borders("state") +
+  theme_light() +
+  xlab("") +
+  ylab("") +
+  theme_void() +
+  labs(caption = "Larger Circles Indicate More Curbs",
+       color = "Selection System",
+       size = "Court Curbs") +
+  scale_fill_discrete(name = "Selection System")
+
+# ggsave("simple map of curbs.jpeg")
+```
+
