@@ -20,6 +20,8 @@ library(gridExtra)
 library(lme4)
 library(MASS)
 library(modelr)
+
+theme_set(theme_light())
 ```
 
 
@@ -253,11 +255,15 @@ ggplot(data = percent_curbing2_predictions) +
   xlab("Level of Professionalization") +
   ylab("Predicted Proportion")
 
+# ggsave("Prof and proportion.png")
+
 ggplot(data = percent_curbing2_predictions) +
   geom_boxplot(aes(x = as.factor(elected), y = pred)) +
   ylab("Predicted Proportion") +
   xlab("Elected Versus Appointed") +
   scale_x_discrete(labels = c("0" = "Appointed", "1" = "Elected"))
+
+# ggsave("elected and prop.png")
 
 j <- ggplot(data = percent_curbing2_predictions) +
   geom_point(aes(x = court_lower_dist, y = pred)) +
@@ -356,6 +362,8 @@ ggplot(grid, aes(court_upper_dist, pred)) +
   geom_point() +
   ylab("Predicted Count") +
   xlab("Simulated Ideological Distance from Upper Chamber")
+
+# ggsave("count of bills and proportions.png")
 
 
 # Now without ideology 
