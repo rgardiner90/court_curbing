@@ -17,6 +17,8 @@ library(readxl)
 library(grid)
 library(gridExtra)
 library(lme4)
+
+theme_set(theme_light())
 ```
 
 This section reads in the relevant data I have collected as well as joins some additional datasets to get political culture and and legislative control.
