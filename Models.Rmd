@@ -18,6 +18,8 @@ library(readxl)
 library(grid)
 library(gridExtra)
 library(lme4)
+library(MASS)
+library(modelr)
 ```
 
 
@@ -47,67 +49,12 @@ exp(curbs.poisson$coefficients[-1])
 Now I will run a Negative Binomial model to check to see how this model compares and to see if there is a problem of overdispersion in the poisson
 
 ```{r}
-library(MASS)
-
 curbs1.nb <- glm.nb(curbs ~ Moralistic + Traditionalistic + RepublicanLegslature + SplitLegislature + court_lower_dist + court_upper_dist + retention + partisan + nonpartisan + court_gov_dist + partisan_ideology_upper + partisan_ideology_lower + nonpartisan_ideology_upper + nonpartisan_ideology_lower + retention_ideology_lower + retention_ideology_upper + Professionalization,
                      data = count_data)
 
 summary(curbs1.nb)
 ```
 
-The Theta parameter (with the accompanying standard error) tells us that overdispersion is present and thus we should not be using a poisson model.  The Negative Binomial also has a lower AIC than the poisson giving even more evidence that the negaitve binomial is the better model.
-
-I forgot until now that I want to remove the governor from the model that looks at all bills because they are not really in the calculation for this.  The code below is a new model excluding the governor.
-
-```{r}
-curbs2.nb <- glm.nb(curbs ~ Moralistic + Traditionalistic + RepublicanLegslature + SplitLegislature + court_lower_dist + court_upper_dist + retention + partisan + nonpartisan + partisan_ideology_upper + partisan_ideology_lower + nonpartisan_ideology_upper + nonpartisan_ideology_lower + retention_ideology_lower + retention_ideology_upper + Professionalization,
-                     data = count_data)
-
-summary(curbs2.nb)
-```
-
-
-```{r}
-library(modelr)
-
-grid <- count_data %>%
-  data_grid(retention_ideology_upper, .model = curbs2.nb) %>%
-  add_predictions(curbs2.nb)
-  
-
-grid
-
-ggplot(grid, aes(retention_ideology_upper, pred)) +
-  geom_point()
-```
-
-```{r}
-curbs2.nb <- glm.nb(curbs ~ Moralistic + Traditionalistic + RepublicanLegslature + SplitLegislature + court_lower_dist + court_upper_dist + retention + partisan + nonpartisan + partisan_ideology_upper + partisan_ideology_lower + nonpartisan_ideology_upper + nonpartisan_ideology_lower + retention_ideology_lower + retention_ideology_upper + Professionalization,
-                     data = count_data)
-
-summary(curbs2.nb)
-```
-
-# Variations 
-
-```{r}
-# bare bones model: 
-curbs3.nb <- glm.nb(curbs ~ retention + partisan + nonpartisan,
-                     data = count_data)
-summary(curbs3.nb)
-```
-
-```{r}
-curbs4.nb <- glm.nb(curbs ~ court_lower_dist + court_upper_dist + retention + partisan + nonpartisan,
-                     data = count_data)
-summary(curbs4.nb)
-```
-
-```{r}
-curbs5.nb <- glm.nb(curbs ~ court_lower_dist + court_upper_dist + retention + partisan + nonpartisan + partisan_ideology_upper + partisan_ideology_lower + nonpartisan_ideology_upper + nonpartisan_ideology_lower + retention_ideology_lower + retention_ideology_upper,
-                     data = count_data)
-summary(curbs5.nb)
-```
 
 ### Elected and Appointed 
 
@@ -117,24 +64,6 @@ This section is looking at elected and appointed versus the broken down variable
 curbs.elected.nb <- glm.nb(curbs ~ elected,
                      data = count_data)
 summary(curbs.elected.nb) # not significant
-```
-
-```{r}
-curbs.elected1.nb <- glm.nb(curbs ~ elected + court_upper_dist + court_lower_dist,
-                     data = count_data)
-summary(curbs.elected1.nb) # again, the upper house ideological distance variable is significant
-```
-
-```{r}
-curbs.elected2.nb <- glm.nb(curbs ~ elected + court_upper_dist + court_lower_dist + elected_ideology_lower + elected_ideology_upper,
-                     data = count_data)
-summary(curbs.elected2.nb) # upper is significant still
-```
-
-```{r}
-curbs.elected3.nb <- glm.nb(curbs ~ elected + court_upper_dist + court_lower_dist + elected_ideology_lower + elected_ideology_upper + Moralistic + Traditionalistic + RepublicanLegslature + SplitLegislature +  Professionalization,
-                     data = count_data)
-summary(curbs.elected3.nb)
 ```
 
 
@@ -180,11 +109,7 @@ count_data2 <- left_join(count_data2, professionalization, by = c("Fullstate" = 
 table(count_data2$Year, count_data2$Fullstate)
 ```
 
-```{r}
-curbs_2.nb <- glm.nb(curbs ~ retention + partisan + nonpartisan,
-                     data = count_data2)
-summary(curbs_2.nb) # nothing significant
-```
+
 
 ```{r}
 curbs2.elected1.nb <- glm.nb(curbs ~ elected + court_upper_dist + court_lower_dist,
@@ -202,13 +127,6 @@ summary(curbs2.elected2.nb) # nothing significant
 curbs2.elected3.nb <- glm.nb(curbs ~ elected + court_upper_dist + court_lower_dist + elected_ideology_lower + elected_ideology_upper + Moralistic + Traditionalistic + RepublicanLegslature + SplitLegislature +  Professionalization,
                      data = count_data2)
 summary(curbs2.elected3.nb)
-```
-
-```{r}
-curbs2_full.nb <- glm.nb(curbs ~ Moralistic + Traditionalistic + RepublicanLegslature + SplitLegislature + court_lower_dist + court_upper_dist + retention + partisan + nonpartisan + partisan_ideology_upper + partisan_ideology_lower + nonpartisan_ideology_upper + nonpartisan_ideology_lower + retention_ideology_lower + retention_ideology_upper + Professionalization,
-                     data = count_data2)
-
-summary(curbs2_full.nb) # none of my important variables are predictive
 ```
 
 
@@ -268,54 +186,10 @@ A simple t-test shows that there is a statistically significant differnece betwe
 t.test(percentage ~ Elected, data = percent_curbing)
 ```
 
-Now let's try a simple linear model:
-
-```{r}
-percent_md <- lm(percentage ~ Elected, data = percent_curbing)
-summary(percent_md)
-```
-
-Now we are starting to get some significance.  Let's start with some more variables and see what happens
-
-```{r}
-percent_md_1 <- lm(percentage ~ elected + court_upper_dist + court_lower_dist, 
-                    data = percent_curbing)
-summary(percent_md_1) # elected is still significant and positive
-```
-
-Adding in interaction terms
-```{r}
-percent_md_2 <- lm(percentage ~ elected + court_upper_dist + court_lower_dist + elected_ideology_upper + elected_ideology_lower, 
-                    data = percent_curbing)
-
-summary(percent_md_2) # elected is still positive and significant.  Nothing else is close
-```
-Adding in political culture
-```{r}
-percent_md_3 <- lm(percentage ~ elected + court_upper_dist + court_lower_dist + elected_ideology_upper + elected_ideology_lower +
-                     Moralistic + Traditionalistic, 
-                    data = percent_curbing)
-summary(percent_md_3) # election is still positive and significant.  Nothing else is. 
-```
-
-adding in professionalization
-```{r}
-percent_md_4 <- lm(percentage ~ elected + court_upper_dist + court_lower_dist + elected_ideology_upper + elected_ideology_lower +
-                     Moralistic + Traditionalistic + Professionalization, 
-                    data = percent_curbing)
-
-summary(percent_md_4) # elected is positive and significant.  Professionalization is positive and significant
-```
-
 adding in unified government.  This would constitute the full model
 ```{r}
 percent_curbing <- percent_curbing %>%
   mutate(unified = ifelse(SplitLegislature == 0, 1, 0))
-
-percent_md_5 <- lm(percentage ~ elected + court_upper_dist + court_lower_dist + elected_ideology_upper + elected_ideology_lower +
-                     Moralistic + Traditionalistic + Professionalization + unified, 
-                    data = percent_curbing)
-summary(percent_md_5) # elected hangs on at the .1 significance level.  Traditionalistic is positive and sig at .1, professionalization is positive and sig at .1, unified is negative (DON'T KNOW WHY) and significant at .05.
 ```
 
 Takeaway: Elected really is significant and robust to multiple variations.
@@ -342,20 +216,9 @@ summary(percent_md_8)
 percent_md_9 <- lm(percentage ~ elected + court_upper_dist + court_lower_dist + elected_ideology_upper + elected_ideology_lower, 
                     data = percent_curbing2)
 summary(percent_md_9) # nothing sig
-
-percent_md_10 <- lm(percentage ~ elected + court_upper_dist + court_lower_dist + elected_ideology_upper + elected_ideology_lower + Moralistic + Traditionalistic, 
-                    data = percent_curbing2)
-summary(percent_md_10) # nothing sig
-
-percent_md_11 <- lm(percentage ~ elected + court_upper_dist + court_lower_dist + elected_ideology_upper + elected_ideology_lower + Moralistic + Traditionalistic + Professionalization, 
-                    data = percent_curbing2) # professionalization is sig
-summary(percent_md_11)
 ```
 
 
-### takeaway
-
-Using less data (fewer years), the model is no longer significant.  DO IDEOLOGY WITH FEWER YEARS (MORE PROPER), THEN DO FULLER MODELS WITHOUT IDEOLOGY.
 
 # Final Models:
 
