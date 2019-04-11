@@ -226,6 +226,11 @@ summary(percent_md_9) # nothing sig
 
 I will use these as the official models with the broken down models in an appendix.
 
+
+
+
+
+
 ## Final Models - Percentage DV
 ```{r}
 ## Shorter years
@@ -295,6 +300,9 @@ ggplot(data = percent_curbing_predictions) +
   scale_x_discrete(labels = c("0" = "Appointed", "1" = "Elected"))
 
 ```
+
+
+
 
 ## Final Models - Count
 
