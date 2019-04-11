@@ -393,6 +393,11 @@ ggplot(data = count_data_predictions) +
   
 ```
 
+
+
+
+
+
 ## Model diagnostics
 
 ### No Ideology:
