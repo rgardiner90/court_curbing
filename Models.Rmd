@@ -488,4 +488,152 @@ summary(test2)
 
 
 
+# Variations 
+
+This section is the variations to try to get an idea of what may be causing this problem of not finding significance.  
+
+## Ideological Distance
+
+The first variation is ideological distance:
+
+First thing I need is a new ideology variable.  I found a resource that appears to have a lot of judge data: https://www.acslaw.org/analysis/reports/partisan-justice/
+
+Here I am loading the data and grabbing only the important variables
+```{r}
+later_judges <- read_excel("later judges.xlsx")
+
+later_judges <- later_judges %>%
+  dplyr::select(statename, `decision year`, `judge's name`, 
+                `judge's political party`, `years to next election`)
+```
+
+I am amking a lot of decisions on this one.  The beginning is just cleaning up the data, and making it easier to manipuate.  Toward the middle, I am forcing NAs for multiple years and then filtering down and filtering up as necessary to remove missing data.  Nice trick, but assumes that things are changing much.
+```{r}
+judges <- later_judges %>%
+  distinct() %>%
+  rename(year = 2,
+         judges_name = 3,
+         judges_party = 4,
+         years_to_election = 5) %>%
+  mutate(democrat = ifelse(judges_party == "D", 1, 0)) %>%
+  dplyr::select(-judges_name, -judges_party) %>%
+  group_by(statename, year) %>%
+  summarize(mean_dem = mean(democrat)) %>%
+  na.omit() %>%
+  mutate(dem_majority = ifelse(mean_dem >= 0.5, 1, 0)) %>%
+  dplyr::select(-mean_dem) %>%
+  filter(year > 2007) %>%
+  spread(year, dem_majority) %>% # nifty trick to create nas
+  mutate(`2015` = NA, 
+         `2016` = NA, 
+         `2017` = NA, 
+         `2018` = NA) %>%
+  gather(year, dem_majority, -statename) %>%
+  arrange(statename, year) %>%
+  fill(dem_majority) %>% # filling in missing data
+  group_by(statename) %>%
+  fill(dem_majority, .direction = "up") %>% # filling in last missing data
+  mutate(year = as.numeric(year))
+```
+
+Now I am reading in the data used in the overrides chapter that has legislative control for many years.  I then join it and create teh variable `ideological congruent`
+```{r}
+partisan_control <- read_csv("~/Google Drive/school/Dissertation/Data/override_chapter/data/partisan_control.csv") %>%
+  filter(Year >= 2008) %>%
+  dplyr::select(-republican_court, -ideologically_similary)
+
+ideology <- partisan_control %>%
+  left_join(judges, by = c("State" = "statename", "Year" = "year")) %>%
+  mutate(repub_majority = ifelse(dem_majority == 0, 1, 0),
+         ideological_congruent = ifelse(repub_majority == RepublicanLegslature, 1, 0)) %>%
+  dplyr::select(State, Year, ideological_congruent)
+```
+
+
+### Proportion of curbs
+
+Now I am trying out the model for proportion of curbs:  Short story is that after a simple model, nothing is significant.
+```{r}
+percent_curbing_ideology <- percent_curbing2 %>%
+  left_join(ideology, by = c("Fullstate" = "State", "Year"))
+
+pct_new_ideology_1 <- lm(percentage ~ elected, 
+                    data = percent_curbing_ideology)
+summary(pct_new_ideology_1)
+
+pct_new_ideology_2 <- lm(percentage ~ elected + ideological_congruent, 
+                    data = percent_curbing_ideology)
+summary(pct_new_ideology_2) # nothing sig
+
+pct_new_ideology_3 <- lm(percentage ~ elected + ideological_congruent + elected*ideological_congruent, 
+                    data = percent_curbing_ideology)
+summary(pct_new_ideology_3) # nothing sig
+```
+
+What if I take out those nasty assumptions especially toward the end?  (nothing changes)
+```{r}
+pct_curb_ideo_filter <- percent_curbing_ideology %>%
+  filter(Year < 2015)
+
+pct_filter_ideology_1 <- lm(percentage ~ elected, 
+                    data = pct_curb_ideo_filter)
+summary(pct_filter_ideology_1) # sig
+
+pct_filter_ideology_2 <- lm(percentage ~ elected + ideological_congruent, 
+                    data = pct_curb_ideo_filter)
+summary(pct_filter_ideology_2) # nothing sig
+
+pct_filter_ideology_3 <- lm(percentage ~ elected + ideological_congruent + elected*ideological_congruent,
+                    data = pct_curb_ideo_filter)
+summary(pct_filter_ideology_3) # nothing sig
+```
+
+
+### Count models
+
+```{r}
+curbs_data_new_ideology <- count_data2 %>%
+  left_join(ideology, by = c("Fullstate" = "State", "Year")) 
+
+curbs_new_data_1 <- glm.nb(curbs ~elected, data = curbs_data_new_ideology)
+summary(curbs_new_data_1) # not sig!!!
+
+curbs_new_data_2 <- glm.nb(curbs ~ elected + ideological_congruent, data = curbs_data_new_ideology)
+summary(curbs_new_data_2) # ideologically congruent is significant
+
+curbs_new_data_3 <- glm.nb(curbs ~ elected + ideological_congruent + 
+                             elected*ideological_congruent, data = curbs_data_new_ideology)
+summary(curbs_new_data_3) # still significant
+
+curbs_new_data_4 <- glm.nb(curbs ~ elected + ideological_congruent + 
+                             elected*ideological_congruent + Moralistic + 
+                             Traditionalistic + unified + Professionalization,
+                     data = curbs_data_new_ideology)
+summary(curbs_new_data_4) # only unified and professional is still sig
+```
+
+
+What if I take out those nasty assumptions about the later years?
+
+```{r}
+curb_ideo_filter <- curbs_data_new_ideology %>%
+  filter(Year < 2015)
+
+curbs_ideo_filter_1 <- glm.nb(curbs ~elected, data = curb_ideo_filter)
+summary(curbs_ideo_filter_1) # not sig!!!
+
+curbs_ideo_filter_2 <- glm.nb(curbs ~elected + ideological_congruent, data = curb_ideo_filter)
+summary(curbs_ideo_filter_2) # ideo is sig
+
+curbs_ideo_filter_3 <- glm.nb(curbs ~elected + ideological_congruent + 
+                                elected*ideological_congruent, data = curb_ideo_filter)
+summary(curbs_ideo_filter_3) # ideo is sig
+
+curbs_ideo_filter_4 <- glm.nb(curbs ~elected + ideological_congruent + 
+                                elected*ideological_congruent + unified +
+                                Moralistic + Traditionalistic + Professionalization,
+                              data = curb_ideo_filter)
+summary(curbs_ideo_filter_4) # just unified and professionalization
+```
+
 
