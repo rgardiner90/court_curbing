@@ -1,0 +1,87 @@
+---
+title: "Extreme Curbs"
+author: "Richard G. Gardiner"
+date: "4/20/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+library(readxl)
+
+extreme_raw <- read_excel("exreme curbs.xlsx") %>%
+  filter(!(Year %in% c(2007, 43147)))
+
+professional <- read_csv("ncsl professionalization.csv")
+```
+
+```{r}
+curbs_year <- extreme_raw %>%
+  select(Fullstate, Year,extreme_curb) %>%
+  mutate(extreme_curb = ifelse(is.na(extreme_curb), 0, extreme_curb)) %>%
+  group_by(Fullstate, Year) %>%
+  mutate(extreme_curb = as.numeric(extreme_curb)) %>%
+  summarize(num_extreme_curbs = sum(extreme_curb))
+
+covariates <- extreme_raw %>%
+  select(Fullstate, Year, Elected, Moralistic, Traditionalistic, RepublicanLegslature, 
+         SplitLegislature, unified, court_upper_dist, court_lower_dist) %>%
+  left_join(professional, by = c("Fullstate" = "State")) %>%
+  arrange(Fullstate, Year) %>%
+  distinct()
+
+curbs_year
+covariates
+
+merged <- curbs_year %>%
+  left_join(covariates, by = c("Fullstate", "Year"))
+
+fixing_years <- merged %>%
+  select(Fullstate, Year, num_extreme_curbs) %>%
+  spread(Year, num_extreme_curbs) %>%
+  gather(Year, num_extreme_curbs, -Fullstate) %>%
+  mutate(num_extreme_curbs = ifelse(is.na(num_extreme_curbs), 0, num_extreme_curbs)) %>%
+  mutate(Year = as.numeric(Year))
+
+model_count <- fixing_years %>%
+  left_join(merged, by = c("Fullstate", "Year")) %>%
+  select(-num_extreme_curbs.y) %>%
+  rename(num_extreme_curbs = "num_extreme_curbs.x") %>%
+  arrange(Fullstate, Year) %>%
+  fill(Elected, Moralistic, Traditionalistic, RepublicanLegslature, SplitLegislature, unified,
+       court_upper_dist, court_lower_dist, Professionalization) %>%
+  fill(Elected, Moralistic, Traditionalistic, RepublicanLegslature, SplitLegislature, unified,
+       court_upper_dist, court_lower_dist, Professionalization, .direction = "up") %>%
+  mutate(Moralistic = ifelse(is.na(Moralistic), 0, Moralistic),
+         Traditionalistic = ifelse(is.na(Traditionalistic), 0, Moralistic))
+```
+
+
+
+```{r}
+extreme <- extreme_raw %>%
+  select(Fullstate, State, Year, Elected, extreme_curb, 
+         RichardLastAction, Moralistic, Traditionalistic, RepublicanLegslature, 
+         SplitLegislature, unified, court_upper_dist, court_lower_dist) %>%
+  left_join(professional, by = c("Fullstate" = "State"))
+
+curbs <- extreme %>%
+  count(Fullstate, Year) %>%
+  spread(Year, n) %>%
+  gather(Year, overrides, -Fullstate) %>%
+  mutate(overrides = ifelse(is.na(overrides), 0, overrides)) 
+
+
+curbs %>%
+  mutate(Year = as.integer(Year))  %>%
+  inner_join(extreme, by = c("Fullstate", "Year"))
+
+
+```
+
+
