@@ -17,10 +17,8 @@ library(lme4)
 library(MASS)
 library(modelr)
 library(pscl)
-
 extreme_raw <- read_excel("exreme curbs.xlsx") %>%
   filter(!(Year %in% c(2007, 43147)))
-
 professional <- read_csv("ncsl professionalization.csv")
 ```
 
@@ -35,27 +33,22 @@ curbs_year <- extreme_raw %>%
   group_by(Fullstate, Year) %>%
   mutate(extreme_curb = as.numeric(extreme_curb)) %>%
   summarize(num_extreme_curbs = sum(extreme_curb))
-
 covariates <- extreme_raw %>%
   dplyr::select(Fullstate, Year, Elected, Moralistic, Traditionalistic, RepublicanLegslature, 
          SplitLegislature, unified, court_upper_dist, court_lower_dist) %>%
   left_join(professional, by = c("Fullstate" = "State")) %>%
   arrange(Fullstate, Year) %>%
   distinct()
-
 curbs_year
 covariates
-
 merged <- curbs_year %>%
   left_join(covariates, by = c("Fullstate", "Year"))
-
 fixing_years <- merged %>%
   dplyr::select(Fullstate, Year, num_extreme_curbs) %>%
   spread(Year, num_extreme_curbs) %>%
   gather(Year, num_extreme_curbs, -Fullstate) %>%
   mutate(num_extreme_curbs = ifelse(is.na(num_extreme_curbs), 0, num_extreme_curbs)) %>%
   mutate(Year = as.numeric(Year))
-
 model_count <- fixing_years %>%
   left_join(merged, by = c("Fullstate", "Year")) %>%
   dplyr::select(-num_extreme_curbs.y) %>%
@@ -70,7 +63,6 @@ model_count <- fixing_years %>%
          Traditionalistic = ifelse(is.na(Traditionalistic), 0, Moralistic),
          Elected = ifelse(Elected == "Elected", 1, 0),
          Fullstate = as.factor(Fullstate)) 
-
 ```
 
 ### Running The Models
@@ -79,7 +71,6 @@ First let's test if we need to use negative binomial because of overdispersion
 ```{r}
 elected_model <- glm(num_extreme_curbs ~ Elected, data = model_count, family = "poisson")
 summary(elected_model) # not sig!!!
-
 library(AER)
 dispersiontest(elected_model)
 ```
@@ -91,18 +82,10 @@ model_count %>%
   count(num_extreme_curbs, sort = TRUE) %>% # that is a ton of 0's 
   ggplot(aes(num_extreme_curbs, n)) +
   geom_col()
-
 elected_nb <- glm.nb(num_extreme_curbs ~ Elected, data = model_count)
 elected_zinb <- zeroinfl(num_extreme_curbs ~ Elected | Elected, data = model_count,
                          dist = "negbin", EM = TRUE)
-
 vuong(elected_nb, elected_zinb) # looks like ZINB is the best model 
-
-<<<<<<< HEAD
-curbs %>%
-  mutate(Year = as.integer(Year))  %>%
-  inner_join(extreme, by = c("Fullstate", "Year"))
-=======
 summary(elected_zinb) # kind of a bummer
 ```
 
@@ -112,23 +95,19 @@ elected_zinb <- zeroinfl(num_extreme_curbs ~ Elected | Elected, data = model_cou
                           dist = "negbin", EM = TRUE)
 summary(ideology_zinb)
 exp(coef((ideology_zinb)))
-
 ideology_zinb <- zeroinfl(num_extreme_curbs ~ Elected + court_upper_dist + court_lower_dist |
                           Elected, data = model_count, 
                           dist = "negbin", EM = TRUE)
 summary(ideology_zinb)
 exp(coef(ideology_zinb))
-
 interaction_zinb <- zeroinfl(num_extreme_curbs ~ Elected + court_upper_dist + court_lower_dist +
                              Elected * court_upper_dist + Elected * court_lower_dist |
                              Elected, data = model_count,
                              dist = "negbin", EM = TRUE)
 summary(interaction_zinb)
 exp(coef(ideology_zinb))
-
 model_count_no_na <- model_count %>%
   na.omit()
-
 full_zinb <- zeroinfl(num_extreme_curbs ~ Elected + court_upper_dist + court_lower_dist +
                       Elected * court_upper_dist + Elected * court_lower_dist + unified +
                       Professionalization + Traditionalistic |
@@ -140,9 +119,7 @@ exp(coef(full_zinb))
 
 ```{r}
 library(stargazer)
-
 stargazer(elected_zinb, ideology_zinb, interaction_zinb, full_zinb, type = "text")
->>>>>>> bf1c8bf0247b90e177ddff0ee16aafdf9705f84c
 ```
 
 
@@ -150,22 +127,17 @@ stargazer(elected_zinb, ideology_zinb, interaction_zinb, full_zinb, type = "text
 ```{r}
 fixing_years2 <- fixing_years %>%
   dplyr::select(-num_extreme_curbs)
-
-
 proportion_extreme_prep <- extreme_raw %>%
   dplyr::select(Fullstate, Year, Elected, MoreDefined, Moralistic, Traditionalistic, RepublicanLegslature,
          SplitLegislature, unified, court_lower_dist, court_upper_dist) %>%
   arrange(Fullstate, Year) %>%
   distinct() 
-
 proportion_covariates <- fixing_years2 %>%
   left_join(proportion_extreme_prep, by = c("Fullstate", "Year")) %>%
   fill(Elected, MoreDefined, Moralistic, Traditionalistic, RepublicanLegslature, SplitLegislature,
        unified, court_lower_dist, court_upper_dist) %>%
   fill(Elected, MoreDefined, Moralistic, Traditionalistic, RepublicanLegslature, SplitLegislature,
        unified, court_lower_dist, court_upper_dist, .direction = "up")
-
-
 proportion <- extreme_raw %>%
   mutate(extreme_curb = replace(extreme_curb, is.na(extreme_curb), 0),
          extreme_curb = as.integer(extreme_curb)) %>%
@@ -174,11 +146,9 @@ proportion <- extreme_raw %>%
   spread(Year, proportion) %>%
   gather(Year, proportion, -Fullstate) %>%
   mutate(proportion = ifelse(is.na(proportion), 0, proportion))
-
 proportion_df <- proportion %>%
   mutate(Year = as.integer(Year)) %>%
   left_join(proportion_covariates, by = c("Fullstate", "Year"))
-
 proportion_df %>%
   ggplot(aes(x = proportion)) +
   geom_histogram()
@@ -190,6 +160,3 @@ proportion_df %>%
 proportion_elected <- lm(proportion ~ Elected, data = proportion_df)
 summary(proportion_elected) # positive and sig (good)
 ```
-
-
-
