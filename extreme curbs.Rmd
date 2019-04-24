@@ -80,8 +80,6 @@ curbs <- extreme %>%
 curbs %>%
   mutate(Year = as.integer(Year))  %>%
   inner_join(extreme, by = c("Fullstate", "Year"))
-
-
 ```
 
 
