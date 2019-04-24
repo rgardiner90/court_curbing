@@ -160,3 +160,7 @@ proportion_df %>%
 proportion_elected <- lm(proportion ~ Elected, data = proportion_df)
 summary(proportion_elected) # positive and sig (good)
 ```
+
+
+
+add pickles
