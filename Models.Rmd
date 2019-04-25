@@ -20,6 +20,7 @@ library(gridExtra)
 library(lme4)
 library(MASS)
 library(modelr)
+library(modelr)
 
 theme_set(theme_light())
 ```
@@ -247,6 +248,8 @@ summary(percent_md_no_id_1) # full model (excluding ideology)
 percent_md_no_id_2 <- lm(percentage ~ elected, data = percent_curbing)
 summary(percent_md_no_id_2) # sig, by itself
 ```
+
+
 
 
 ### Predictions
@@ -570,6 +573,8 @@ pct_new_ideology_3 <- lm(percentage ~ elected + ideological_congruent + elected*
 summary(pct_new_ideology_3) # nothing sig
 ```
 
+
+
 What if I take out those nasty assumptions especially toward the end?  (nothing changes)
 ```{r}
 pct_curb_ideo_filter <- percent_curbing_ideology %>%
@@ -587,6 +592,8 @@ pct_filter_ideology_3 <- lm(percentage ~ elected + ideological_congruent + elect
                     data = pct_curb_ideo_filter)
 summary(pct_filter_ideology_3) # nothing sig
 ```
+
+
 
 
 ### Count models
@@ -637,3 +644,56 @@ summary(curbs_ideo_filter_4) # just unified and professionalization
 ```
 
 
+## Viewing Interaction terms
+
+Steigerwalt suggested looking at the interaction effects by plotting them out (may not always be sig at one spot, but yes at another).  Below are my attempts.  I seems to trust the second (predicted) and the third/fourth (the actual data) compared to the first.
+
+
+first attempt to look at interaction effect (predicted)
+```{r}
+percent_curbing %>%
+  data_grid(court_upper_dist, elected, elected_ideology_upper, .model = percent_md_9) %>%
+  add_predictions(percent_md_9) %>%
+  ggplot(aes(x = court_upper_dist, y = pred, color = as.factor(elected))) +
+  geom_smooth() 
+```
+
+Second attempt to look at interaction effect (predicted)
+```{r}
+pred_df <- percent_curbing %>%
+  data_grid(court_upper_dist, elected, elected_ideology_upper, .model = percent_md_9)
+
+pred <- predict(object = percent_md_9,
+        newdata = pred_df,
+        interval = "predict")
+pred <- as_tibble(pred)
+
+predictions <- bind_cols(pred_df, pred)
+
+predictions %>%
+  ggplot(aes(x = court_upper_dist, y = fit, color = as.factor(elected),
+             ymin = lwr, ymax = upr)) +
+  geom_line() +
+  geom_ribbon(alpha = 0.2)
+```
+
+third (raw data)
+```{r}
+percent_curbing %>%
+  ggplot(aes(x = court_upper_dist, y = percentage, color = as.factor(elected))) +
+  geom_smooth() +
+  labs(x = "Distance between Court and Upper Chamber",
+       y = "Percentage of Court Curbing Bills",
+       color = "Elected \nCourts") +
+  scale_color_discrete(labels = c("No", "Yes"))
+```
+
+```{r}
+percent_curbing %>%
+  ggplot(aes(x = court_lower_dist, y = percentage, color = as.factor(elected))) +
+  geom_smooth() +
+  labs(x = "Distance between Court and Upper Chamber",
+       y = "Percentage of Court Curbing Bills",
+       color = "Elected \nCourts") +
+  scale_color_discrete(labels = c("No", "Yes"))
+```
