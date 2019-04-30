@@ -560,17 +560,23 @@ Now I am trying out the model for proportion of curbs:  Short story is that afte
 percent_curbing_ideology <- percent_curbing2 %>%
   left_join(ideology, by = c("Fullstate" = "State", "Year"))
 
-pct_new_ideology_1 <- lm(percentage ~ elected, 
+pct_new_ideology_1 <- lmer(percentage ~ elected + (1 | Fullstate), 
                     data = percent_curbing_ideology)
-summary(pct_new_ideology_1)
 
-pct_new_ideology_2 <- lm(percentage ~ elected + ideological_congruent, 
+pct_new_ideology_2 <- lmer(percentage ~ elected + ideological_congruent+ (1 | Fullstate), 
                     data = percent_curbing_ideology)
-summary(pct_new_ideology_2) # nothing sig
 
-pct_new_ideology_3 <- lm(percentage ~ elected + ideological_congruent + elected*ideological_congruent, 
+pct_new_ideology_3 <- lmer(percentage ~ elected + ideological_congruent + elected*ideological_congruent
+                           + (1 | Fullstate), 
                     data = percent_curbing_ideology)
-summary(pct_new_ideology_3) # nothing sig
+
+pct_new_ideology_4 <- lmer(percentage ~ elected + ideological_congruent + elected*ideological_congruent
+                           + Moralistic + Traditionalistic + Professionalization + (1 | Fullstate),
+                           data = percent_curbing_ideology)
+
+
+stargazer::stargazer(pct_new_ideology_1, pct_new_ideology_2, pct_new_ideology_3, pct_new_ideology_4,
+                     type = "text", report = ('vc*p'))
 ```
 
 
@@ -617,6 +623,10 @@ curbs_new_data_4 <- glm.nb(curbs ~ elected + ideological_congruent +
                              Traditionalistic + unified + Professionalization,
                      data = curbs_data_new_ideology)
 summary(curbs_new_data_4) # only unified and professional is still sig
+
+
+stargazer::stargazer(curbs_new_data_1, curbs_new_data_2, curbs_new_data_3, curbs_new_data_4,
+          type = "text", report = ('cv*p'))
 ```
 
 
@@ -697,3 +707,14 @@ percent_curbing %>%
        color = "Elected \nCourts") +
   scale_color_discrete(labels = c("No", "Yes"))
 ```
+
+
+## Count Models interactions
+
+```{r}
+curbs2.elected0.nb <- glm.nb(curbs ~ elected, data = count_data2)
+summary(curbs2.elected0.nb)
+
+plot(count_data2$elected, curbs2.elected0.nb$fitted.values) 
+```
+
