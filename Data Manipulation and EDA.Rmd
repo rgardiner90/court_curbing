@@ -451,9 +451,11 @@ gavelCultureControlOnlyCurbs %>%
   count() %>%
   left_join(all_states, by = c("Fullstate" = "region")) %>%
   ggplot() +
-  geom_polygon(aes(x = long, y = lat, group = group, fill = MoreDefined, color = "white"), alpha = 0.3) +
+  geom_polygon(aes(x = long, y = lat, group = group, fill = MoreDefined),
+               color = "white", alpha = 0.3) +
   geom_point(data = capitals, aes(x = long, y = lat, size = n, color = "blue"), show.legend = FALSE) +
   theme_light() +
+  coord_map() +
   xlab("") +
   ylab("") +
   theme_void() +
