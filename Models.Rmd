@@ -27,8 +27,10 @@ theme_set(theme_light())
 
 
 ```{r}
-count_data <- read_csv("count_data.csv")
-gavelCultureControl <- read_csv("gavelCultureControl.csv")
+count_data <- read_csv("count_data.csv") %>%
+  mutate(Individualistic = ifelse(Moralistic == 0 & Traditionalistic == 0, 1, 0))
+gavelCultureControl <- read_csv("gavelCultureControl.csv") %>%
+  mutate(Individualistic = ifelse(Moralistic == 0 & Traditionalistic == 0, 1, 0))
 gavelFull <- read_csv("gavelFull.csv")
 professionalization <- read_csv("ncsl professionalization.csv")
 ```
@@ -37,7 +39,7 @@ professionalization <- read_csv("ncsl professionalization.csv")
 # Iniital Models
 
 ```{r}
-curbs.poisson <- glm(curbs ~ Moralistic + Traditionalistic + RepublicanLegslature + SplitLegislature + court_lower_dist + court_upper_dist + retention + partisan + nonpartisan + court_gov_dist + court_lower_dist + court_upper_dist + partisan_ideology_upper + partisan_ideology_lower + nonpartisan_ideology_upper + nonpartisan_ideology_lower + retention_ideology_lower + retention_ideology_upper + Professionalization,
+curbs.poisson <- glm(curbs ~ Individualistic + Traditionalistic + RepublicanLegslature + SplitLegislature + court_lower_dist + court_upper_dist + retention + partisan + nonpartisan + court_gov_dist + court_lower_dist + court_upper_dist + partisan_ideology_upper + partisan_ideology_lower + nonpartisan_ideology_upper + nonpartisan_ideology_lower + retention_ideology_lower + retention_ideology_upper + Professionalization,
                      family = poisson(link = log),
                      data = count_data)
 
@@ -52,7 +54,7 @@ exp(curbs.poisson$coefficients[-1])
 Now I will run a Negative Binomial model to check to see how this model compares and to see if there is a problem of overdispersion in the poisson
 
 ```{r}
-curbs1.nb <- glm.nb(curbs ~ Moralistic + Traditionalistic + RepublicanLegslature + SplitLegislature + court_lower_dist + court_upper_dist + retention + partisan + nonpartisan + court_gov_dist + partisan_ideology_upper + partisan_ideology_lower + nonpartisan_ideology_upper + nonpartisan_ideology_lower + retention_ideology_lower + retention_ideology_upper + Professionalization,
+curbs1.nb <- glm.nb(curbs ~ Individualistic + Traditionalistic + RepublicanLegslature + SplitLegislature + court_lower_dist + court_upper_dist + retention + partisan + nonpartisan + court_gov_dist + partisan_ideology_upper + partisan_ideology_lower + nonpartisan_ideology_upper + nonpartisan_ideology_lower + retention_ideology_lower + retention_ideology_upper + Professionalization,
                      data = count_data)
 
 summary(curbs1.nb)
@@ -127,7 +129,7 @@ summary(curbs2.elected2.nb) # nothing significant
 ```
 
 ```{r}
-curbs2.elected3.nb <- glm.nb(curbs ~ elected + court_upper_dist + court_lower_dist + elected_ideology_lower + elected_ideology_upper + Moralistic + Traditionalistic + RepublicanLegslature + SplitLegislature +  Professionalization,
+curbs2.elected3.nb <- glm.nb(curbs ~ elected + court_upper_dist + court_lower_dist + elected_ideology_lower + elected_ideology_upper + Individualistic + Traditionalistic + RepublicanLegslature + SplitLegislature +  Professionalization,
                      data = count_data2)
 summary(curbs2.elected3.nb)
 ```
@@ -146,7 +148,7 @@ Suggestions from Steigerwalt:
 
 Full model
 ```{r}
-curbs_unified.nb <- glm.nb(curbs ~ Moralistic + Traditionalistic + unified + court_lower_dist + court_upper_dist + elected + elected_ideology_upper + elected_ideology_lower + Professionalization,
+curbs_unified.nb <- glm.nb(curbs ~ Individualistic + Traditionalistic + unified + court_lower_dist + court_upper_dist + elected + elected_ideology_upper + elected_ideology_lower + Professionalization,
                      data = count_data2)
 
 summary(curbs_unified.nb) # traditionalistic, professionalization, and unified are significant and positive.
@@ -205,7 +207,7 @@ percent_curbing2 <- percent_curbing %>%
 percent_curbing2
 
 percent_md_6 <- lm(percentage ~ elected + court_upper_dist + court_lower_dist + elected_ideology_upper + elected_ideology_lower +
-                     Moralistic + Traditionalistic + Professionalization + unified, 
+                     Individualistic + Traditionalistic + Professionalization + unified, 
                     data = percent_curbing2) # full model, not good
 
 percent_md_7 <- lm(percentage ~ elected, 
@@ -242,7 +244,7 @@ summary(percent_md_6) # full model with ideology and shorter years
 
 
 ## Full years, no ideology
-percent_md_no_id_1 <- lm(percentage ~ elected + Moralistic + Traditionalistic + Professionalization + unified, data = percent_curbing)
+percent_md_no_id_1 <- lm(percentage ~ elected + Individualistic + Traditionalistic + Professionalization + unified, data = percent_curbing)
 summary(percent_md_no_id_1) # full model (excluding ideology)
 
 percent_md_no_id_2 <- lm(percentage ~ elected, data = percent_curbing)
@@ -301,9 +303,16 @@ ggplot(data = percent_curbing_predictions) +
   xlab("Elected Versus Appointed") +
   ylab("Predicted Proportion") +
   scale_x_discrete(labels = c("0" = "Appointed", "1" = "Elected"))
-
 ```
 
+ Trying to correct for Steigerwalt's comments about the graph being confusing (and needing a lowess smoother)
+```{r}
+percent_curbing2_predictions %>%
+  data_grid(court_lower_dist, .model = percent_md_6) %>%
+  add_predictions(percent_md_6) %>%
+  ggplot(aes(x = court_lower_dist, y = pred)) +
+  geom_line()
+```
 
 
 
@@ -326,7 +335,7 @@ exp(curbs2.elected1.nb$coefficients)
 # longer years (no ideology)
 summary(curbs.elected.nb) # just elected
 
-curbs.elected.unified.nb <- glm.nb(curbs ~ Moralistic + Traditionalistic + unified +  elected + Professionalization,
+curbs.elected.unified.nb <- glm.nb(curbs ~ Individualistic + Traditionalistic + unified +  elected + Professionalization,
                      data = count_data)
 summary(curbs.elected.unified.nb) # full model
 exp(curbs.elected.unified.nb$coefficients)
@@ -479,7 +488,7 @@ There graph shows that while there are instances of a large number of legislatio
 
 This is primarily in response to the poor showing of election.
 ```{r}
-test <- glm.nb(curbs ~ Moralistic + Traditionalistic + unified +  partisan + nonpartisan + retention + Professionalization,
+test <- glm.nb(curbs ~ Individualistic + Traditionalistic + unified +  partisan + nonpartisan + retention + Professionalization,
                      data = count_data)
 summary(test)
 
@@ -571,7 +580,7 @@ pct_new_ideology_3 <- lmer(percentage ~ elected + ideological_congruent + electe
                     data = percent_curbing_ideology)
 
 pct_new_ideology_4 <- lmer(percentage ~ elected + ideological_congruent + elected*ideological_congruent
-                           + Moralistic + Traditionalistic + Professionalization + (1 | Fullstate),
+                           + Individualistic + Traditionalistic + Professionalization + (1 | Fullstate),
                            data = percent_curbing_ideology)
 
 
@@ -619,7 +628,7 @@ curbs_new_data_3 <- glm.nb(curbs ~ elected + ideological_congruent +
 summary(curbs_new_data_3) # still significant
 
 curbs_new_data_4 <- glm.nb(curbs ~ elected + ideological_congruent + 
-                             elected*ideological_congruent + Moralistic + 
+                             elected*ideological_congruent + Individualistic + 
                              Traditionalistic + unified + Professionalization,
                      data = curbs_data_new_ideology)
 summary(curbs_new_data_4) # only unified and professional is still sig
@@ -648,7 +657,7 @@ summary(curbs_ideo_filter_3) # ideo is sig
 
 curbs_ideo_filter_4 <- glm.nb(curbs ~elected + ideological_congruent + 
                                 elected*ideological_congruent + unified +
-                                Moralistic + Traditionalistic + Professionalization,
+                                Individualistic + Traditionalistic + Professionalization,
                               data = curb_ideo_filter)
 summary(curbs_ideo_filter_4) # just unified and professionalization
 ```
@@ -715,6 +724,6 @@ percent_curbing %>%
 curbs2.elected0.nb <- glm.nb(curbs ~ elected, data = count_data2)
 summary(curbs2.elected0.nb)
 
-plot(count_data2$elected, curbs2.elected0.nb$fitted.values) 
+# plot(count_data2$elected, curbs2.elected0.nb$fitted.values) 
 ```
 

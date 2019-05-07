@@ -139,6 +139,8 @@ grid.arrange(a,b,c)
 
 
 ## Creating objects with time and average ideological distance
+
+
 ```{r, ideological_distance_over_time, collapse = TRUE}
 ideology_gov_year <- gavelCultureControl %>% 
   group_by(MoreDefined, Year) %>%
@@ -182,8 +184,39 @@ f <- ggplot(data = ideology_lower_year) +
   labs(colour = "Selection")
 
 # retention continues to be at teh high end of the list
-grid.arrange(d,e,f)
+grid.arrange(e,f)
 ```
+
+
+Steigerwalt didn't really like the graphs, so I am trying to figure out the next graph I want to make.  I think I will be a scatterplot of ideological distance (x) and the number of curbs (y), with different colors by Elected.
+
+```{r}
+gavelCultureControlOnlyCurbs %>%
+  mutate(court_lower = abs(judicial - lower),
+         court_upper = abs(judicial - upper)) %>%
+  group_by(Fullstate, Year, Elected, court_lower, court_upper) %>%
+  summarise(curbs_in_year = sum(curbing)) %>%
+  ggplot(aes(x = court_lower, y = curbs_in_year, color = Elected)) +
+  geom_jitter() +
+  labs(x = "Distance between Court and Lower Chamber", y = "Curbs Per Year") +
+  scale_color_manual(values = c("red", "black"))
+
+# ggsave("Curbs by Ideology and Selection - lower.jpeg")
+
+gavelCultureControlOnlyCurbs %>%
+  mutate(court_lower = abs(judicial - lower),
+         court_upper = abs(judicial - upper)) %>%
+  group_by(Fullstate, Year, Elected, court_lower, court_upper) %>%
+  summarise(curbs_in_year = sum(curbing)) %>%
+  ggplot(aes(x = court_upper, y = curbs_in_year, color = Elected)) +
+  geom_jitter() +
+  labs(x = "Distance between Court and Upper Chamber", y = "Curbs Per Year") +
+  scale_color_manual(values = c("red", "black"))
+
+# ggsave("Curbs by Ideology and Selection - upper.jpeg")
+```
+
+
 
 
 
@@ -488,15 +521,29 @@ gavelCultureControlOnlyCurbs %>%
 ```
 
 
+```{r}
+gavelCultureControl %>%
+  select(State, Year, judicial, lower, upper) %>%
+  filter(Year == 2011) %>%
+  distinct() %>%
+  select(-Year) %>%
+  gather(Branch, Ideology, -State) %>%
+  mutate(Branch = str_to_title(Branch)) %>%
+  ggplot(aes(x = Ideology, y = State, shape = Branch, color = Branch)) +
+  geom_point() +
+  labs(y = "") +
+  scale_color_manual(values = c("red", "black", "black"))
+
+# ggsave("Ideology Graph.jpeg")
+```
 
 
 
 
 ```{r}
-write_csv(count_data, "count_data.csv", na = "")
-write_csv(gavelCultureControl, "gavelCultureControl.csv", na = "")
-write_csv(gavelFull, "gavelFull.csv", na = "")
-
+# write_csv(count_data, "count_data.csv", na = "")
+# write_csv(gavelCultureControl, "gavelCultureControl.csv", na = "")
+# write_csv(gavelFull, "gavelFull.csv", na = "")
 ```
 
 
