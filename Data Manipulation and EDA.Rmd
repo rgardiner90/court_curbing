@@ -230,10 +230,12 @@ g <- gavelCultureControl %>%
   filter(!is.na(court_lower_dist)) %>%
   summarise(sum = sum(curbing),
             avg_ideology = mean(court_lower_dist)) %>%
-  ggplot() +
-  geom_point(aes(x = avg_ideology, y = sum)) +
+  ggplot(aes(x = avg_ideology, y = sum)) +
+  geom_point() +
+  geom_smooth() +
   ylab(NULL) +
-  xlab("Court and Lower Chamber") 
+  xlab("Court and Lower Chamber") +
+  ylab("Court Curbing Introductions")
 
 
 h <- gavelCultureControl %>%
@@ -242,23 +244,13 @@ h <- gavelCultureControl %>%
   filter(!is.na(court_upper_dist)) %>%
   summarise(sum = sum(curbing),
             avg_ideology = mean(court_upper_dist)) %>%
-  ggplot() +
-  geom_point(aes(x = avg_ideology, y = sum)) +
+  ggplot(aes(x = avg_ideology, y = sum)) +
+  geom_point() +
+  geom_smooth() +
   ylab("Court Curbing Introductions") +
   xlab("Court and Upper Chamber")
 
-i <- gavelCultureControl %>%
-  filter(!(Year %in% c("2007", "43147", "2013", "2014", "2015", "2016", "2017", "2018"))) %>% # filtering out bad data
-  group_by(Fullstate) %>%
-  filter(!is.na(court_gov_dist)) %>%
-  summarise(sum = sum(curbing),
-            avg_ideology = mean(court_gov_dist)) %>%
-  ggplot() +
-  geom_point(aes(x = avg_ideology, y = sum)) +
-  ylab(NULL) +
-  xlab("Court and Governor") 
-  
-grid.arrange(g, h, i)
+grid.arrange(g, h)
 ```
 
 The last chart deserves further exploration.  I decided to also run the last plot, but this time only including enacted legislation.  With the note that this is limited in the number of observations, I decided to graph it.  The results still show really no relationship between ideological distance and curbs.
