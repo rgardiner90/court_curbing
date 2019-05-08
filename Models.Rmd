@@ -345,40 +345,14 @@ exp(curbs.elected.unified.nb$coefficients)
 
 ### Adding predictions for Count Data
 
+
 ```{r}
-count_data2_predictions <- count_data2 %>%
-  add_predictions(curbs_unified.nb)
-
-ggplot(data = count_data2_predictions) +
-  geom_boxplot(aes(x = as.factor(Professionalization), y = pred)) +
-  ylab("Predicted Count") +
-  xlab("Level of Professionalization")
-
-ggplot(data = count_data2_predictions) +
-  geom_boxplot(aes(x = as.factor(elected), y = pred)) +
-  ylab("Predicted Count") +
-  xlab("Elected Versus Appointed") +
-  scale_x_discrete(labels = c("0" = "Appointed", "1" = "Elected"))
-
-l <- ggplot(data = count_data2_predictions) +
-  geom_point(aes(x = court_lower_dist, y = pred)) +
-  ylab("Predicted Count") +
-  xlab("Ideological Distance from Lower Chamber")
-
-
-m <- ggplot(data = count_data2_predictions) +
-  geom_point(aes(x = court_upper_dist, y = pred)) +
-  ylab("Predicted Count") +
-  xlab("Ideological Distance from Upper Chamber")
-
-grid.arrange(l, m)
-
+# Figure 5.15
 grid <- count_data2 %>%
   data_grid(court_upper_dist, .model = curbs_unified.nb)
-
 pred <- predict(curbs_unified.nb, newdata = grid, type = "response")
 pred <- as.vector(pred)
-grid <- as.data.frame(grid, pred)
+grid <- as_tibble(grid, pred)
 
 ggplot(grid, aes(x = court_upper_dist)) +
   geom_line(aes(y = pred)) +
@@ -386,30 +360,7 @@ ggplot(grid, aes(x = court_upper_dist)) +
   xlab("Simulated Ideological Distance from Upper Chamber")
 
 # ggsave("count of bills and proportions.png")
-
-
-# Now without ideology 
-count_data_predictions <- count_data %>%
-  add_predictions(curbs.elected.unified.nb) 
-
-# added jitter because it was so weird
-ggplot(data = count_data_predictions) +
-  geom_boxplot(aes(x = as.factor(Professionalization), y = pred)) +
-  ylab("Predicted Count") +
-  xlab("Level of Professinalization") +
-  geom_jitter(aes(x = as.factor(Professionalization), y = pred))
-
-ggplot(data = count_data_predictions) +
-  geom_boxplot(aes(x = as.factor(elected), y = pred)) +
-  ylab("Predicted Count") +
-  xlab("Elected Versus Appointed") +
-  scale_x_discrete(labels = c("0" = "Appointed", "1" = "Elected"))
-  
 ```
-
-
-
-
 
 
 ## Model diagnostics
