@@ -221,6 +221,12 @@ summary(percent_md_8)
 percent_md_9 <- lm(percentage ~ elected + court_upper_dist + court_lower_dist + elected_ideology_upper + elected_ideology_lower, 
                     data = percent_curbing2)
 summary(percent_md_9) # nothing sig
+
+# adding in all controls, but no interaction
+percent_md_10 <- lm(percentage ~ elected + court_upper_dist + court_lower_dist + 
+                     Individualistic + Traditionalistic + Professionalization + unified, 
+                    data = percent_curbing2) # full model, not good
+summary(percent_md_10)
 ```
 
 
@@ -241,7 +247,7 @@ summary(percent_md_7) # just elected
 summary(percent_md_8) # elected and ideology
 summary(percent_md_9) # elected interacted with ideology nothing sig
 summary(percent_md_6) # full model with ideology and shorter years
-
+summary(percent_md_10) # full model with ideology but no interaction
 
 ## Full years, no ideology
 percent_md_no_id_1 <- lm(percentage ~ elected + Individualistic + Traditionalistic + Professionalization + unified, data = percent_curbing)
@@ -329,6 +335,12 @@ summary(curbs2.elected0.nb) # just elected
 
 summary(curbs2.elected1.nb) # elected and ideology (no iteractions)
 summary(curbs2.elected2.nb) # elected and ideology (interacted)
+
+curbs_full_no_interaction <- glm.nb(curbs ~ elected + court_upper_dist + court_lower_dist + Individualistic + 
+       Traditionalistic + unified + Professionalization,
+       data = count_data)
+summary(curbs_full_no_interaction)
+stargazer::stargazer(curbs_full_no_interaction, type = "text")
 
 exp(curbs2.elected1.nb$coefficients)
 
