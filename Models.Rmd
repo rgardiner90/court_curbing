@@ -339,7 +339,7 @@ summary(curbs2.elected2.nb) # elected and ideology (interacted)
 curbs_full_no_interaction <- glm.nb(curbs ~ elected + court_upper_dist + court_lower_dist + Individualistic + 
        Traditionalistic + unified + Professionalization,
        data = count_data)
-summary(curbs_full_no_interaction)
+summary(curbs_full_no_interaction) # full no interaction
 stargazer::stargazer(curbs_full_no_interaction, type = "text")
 
 exp(curbs2.elected1.nb$coefficients)

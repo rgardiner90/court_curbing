@@ -426,7 +426,7 @@ gavelCultureControlOnlyCurbs %>%
   ggplot(aes(Year, mean, color = MoreDefined)) +
   geom_line() +
   ylab("Average Number of Bills for a State By Selection System") +
-  xlab("Selection System") +
+  xlab("Year") +
   theme_light() +
   scale_x_date() +
   ylim(c(0, 10)) +
@@ -480,7 +480,7 @@ gavelCultureControlOnlyCurbs %>%
                color = "white", alpha = 0.3) +
   geom_point(data = capitals, aes(x = long, y = lat, size = n, color = "blue"), show.legend = FALSE) +
   theme_light() +
-  coord_map() +
+  coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
   xlab("") +
   ylab("") +
   theme_void() +
