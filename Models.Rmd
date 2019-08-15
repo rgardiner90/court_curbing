@@ -625,8 +625,8 @@ pct_curbing_new_ideol4 <- lmer(percentage ~ elected + ideological_congruent + el
                            data = pct_curbing_new_ideol)
 
 
-stargazer::stargazer(pct_curbing_new_ideol1, pct_curbing_new_ideol2, pct_curbing_new_ideol3, pct_curbing_new_ideol4,
-                     type = "text", report = ('vc*p'))
+# stargazer::stargazer(pct_curbing_new_ideol1, pct_curbing_new_ideol2, pct_curbing_new_ideol3, pct_curbing_new_ideol4,
+#                      type = "html", out = "proportion new ideology.doc")
 ```
 
 
