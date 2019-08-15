@@ -336,9 +336,10 @@ summary(curbs2.elected0.nb) # just elected
 summary(curbs2.elected1.nb) # elected and ideology (no iteractions)
 summary(curbs2.elected2.nb) # elected and ideology (interacted)
 
-curbs_full_no_interaction <- glm.nb(curbs ~ elected + court_upper_dist + court_lower_dist + Individualistic + 
-       Traditionalistic + unified + Professionalization,
-       data = count_data)
+curbs_full_no_interaction <- glm.nb(curbs ~ elected + court_upper_dist + 
+                                   court_lower_dist + Individualistic + 
+                                   Traditionalistic + unified + Professionalization,
+                                   data = count_data2)
 summary(curbs_full_no_interaction) # full no interaction
 stargazer::stargazer(curbs_full_no_interaction, type = "text")
 
@@ -602,6 +603,71 @@ summary(curbs_new_data_4) # only unified and professional is still sig
 stargazer::stargazer(curbs_new_data_1, curbs_new_data_2, curbs_new_data_3, curbs_new_data_4,
           type = "text", report = ('cv*p'))
 ```
+
+
+
+```{r}
+pct_curbing_new_ideol <- percent_curbing %>%
+  left_join(ideology, by = c("Fullstate" = "State", "Year")) 
+
+pct_curbing_new_ideol1 <- lmer(percentage ~ elected + (1 | Fullstate), 
+                    data = pct_curbing_new_ideol)
+
+pct_curbing_new_ideol2 <- lmer(percentage ~ elected + ideological_congruent+ (1 | Fullstate), 
+                    data = pct_curbing_new_ideol)
+
+pct_curbing_new_ideol3 <- lmer(percentage ~ elected + ideological_congruent + elected*ideological_congruent
+                           + (1 | Fullstate), 
+                    data = pct_curbing_new_ideol)
+
+pct_curbing_new_ideol4 <- lmer(percentage ~ elected + ideological_congruent + elected*ideological_congruent
+                           + Individualistic + Traditionalistic + Professionalization + (1 | Fullstate),
+                           data = pct_curbing_new_ideol)
+
+
+stargazer::stargazer(pct_curbing_new_ideol1, pct_curbing_new_ideol2, pct_curbing_new_ideol3, pct_curbing_new_ideol4,
+                     type = "text", report = ('vc*p'))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+ideology_full_count <- count_data %>%
+ left_join(ideology, by = c("Fullstate" = "State", "Year"))  
+
+curbs_full_ideology <- glm.nb(curbs ~elected, data = ideology_full_count)
+
+
+curbs_full_ideology2 <- glm.nb(curbs ~ elected + ideological_congruent, data = ideology_full_count)
+
+
+curbs_full_ideology3 <- glm.nb(curbs ~ elected + ideological_congruent + 
+                             elected*ideological_congruent, data = ideology_full_count)
+
+
+curbs_full_ideology4 <- glm.nb(curbs ~ elected + ideological_congruent + 
+                             elected*ideological_congruent + Individualistic + 
+                             Traditionalistic + unified + Professionalization,
+                     data = ideology_full_count)
+
+
+# stargazer::stargazer(curbs_full_ideology, curbs_full_ideology2, curbs_full_ideology3, curbs_full_ideology4,
+#           type = "html", out = "alternative ideology.doc")
+```
+
+
+
+
 
 
 What if I take out those nasty assumptions about the later years?
